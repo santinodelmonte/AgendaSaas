@@ -1,4 +1,5 @@
-﻿using AgendaSaaS.Repositories;
+﻿using AgendaSaaS.Entities;
+using AgendaSaaS.Repositories;
 using AgendaSaaS.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,13 +11,19 @@ public class AdminAgendaController : ControllerBase
 {
     private readonly ITenantProvider _tenantProvider;
     private readonly ITurnoRepository _turnoRepository;
+    private readonly IBloqueRepository _bloqueRepository;
+    private readonly IManicuristaRepository _manicuristaRepository;
 
     public AdminAgendaController(
         ITenantProvider tenantProvider,
-        ITurnoRepository turnoRepository)
+        ITurnoRepository turnoRepository,
+        IBloqueRepository bloqueRepository,
+        IManicuristaRepository manicuristaRepository)
     {
         _tenantProvider = tenantProvider;
         _turnoRepository = turnoRepository;
+        _bloqueRepository = bloqueRepository;
+        _manicuristaRepository = manicuristaRepository;
     }
 
     [HttpGet]
@@ -44,6 +51,71 @@ public class AdminAgendaController : ControllerBase
                     t.ServicioSolicitado,
                     t.NotaInterna
                 });
+
+        return Ok(resultado);
+    }
+
+    [HttpGet("slots")]
+    public async Task<IActionResult> ObtenerSlots(
+        [FromQuery] DateTime fecha)
+    {
+        var tenantId = _tenantProvider.TenantId;
+
+        var manicurista =
+            await _manicuristaRepository
+                .ObtenerPorTenantAsync(tenantId);
+
+        if (manicurista is null)
+            return NotFound("Manicurista no encontrada.");
+
+        var bloques =
+            await _bloqueRepository
+                .ObtenerPorTenantAsync(tenantId);
+
+        var bloque =
+            bloques.FirstOrDefault(
+                x => x.DiaSemana == fecha.DayOfWeek);
+
+        if (bloque is null)
+            return Ok(new List<object>());
+
+        var turnos =
+            await _turnoRepository
+                .ObtenerPorFechaAsync(tenantId, fecha);
+
+        var resultado = new List<object>();
+        var actual = fecha.Date + bloque.HoraInicio;
+        var fin = fecha.Date + bloque.HoraFin;
+
+        while (actual < fin)
+        {
+            var hora = actual.TimeOfDay;
+
+            var enPausa =
+                bloque.PausaInicio.HasValue &&
+                bloque.PausaFin.HasValue &&
+                hora >= bloque.PausaInicio.Value &&
+                hora < bloque.PausaFin.Value;
+
+            if (!enPausa)
+            {
+                var turno = turnos.FirstOrDefault(t => t.FechaHora == actual);
+
+                resultado.Add(new
+                {
+                    FechaHora = actual,
+                    Estado = turno?.Estado.ToString()
+                        ?? TurnoEstado.Disponible.ToString(),
+                    Id = turno?.Id,
+                    NombreCliente = turno?.NombreCliente,
+                    TelefonoCliente = turno?.TelefonoCliente,
+                    ServicioSolicitado = turno?.ServicioSolicitado,
+                    NotaInterna = turno?.NotaInterna
+                });
+            }
+
+            actual = actual.AddMinutes(manicurista.DuracionTurnoMinutos);
+        }
 
         return Ok(resultado);
     }

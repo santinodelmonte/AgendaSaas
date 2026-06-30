@@ -133,24 +133,44 @@ public class AdminTurnosController : ControllerBase
     public async Task<IActionResult> CrearManual(
         CrearTurnoManualRequest request)
     {
+        var tenantId = _tenantProvider.TenantId;
+
+        var existente =
+            await _turnoRepository
+                .ObtenerPorFechaHoraAsync(
+                    tenantId,
+                    request.FechaHora);
+
+        if (existente != null)
+        {
+            if (existente.Estado != TurnoEstado.Disponible)
+                return BadRequest("Ese horario ya está ocupado.");
+
+            existente.Estado = TurnoEstado.Confirmado;
+            existente.NombreCliente = request.NombreCliente;
+            existente.TelefonoCliente = request.TelefonoCliente;
+            existente.ServicioSolicitado = request.Servicio;
+            existente.NotaInterna = request.Nota;
+
+            await _turnoRepository.ActualizarAsync(existente);
+            return Ok(existente);
+        }
+
         var turno =
             new Turno
             {
                 Id = Guid.NewGuid(),
-                TenantId =
-                    _tenantProvider.TenantId,
-                FechaHora =
-                    request.FechaHora,
-                NotaInterna =
-                    request.Nota,
-                Estado =
-                    TurnoEstado.Confirmado,
+                TenantId = tenantId,
+                FechaHora = request.FechaHora,
+                NombreCliente = request.NombreCliente,
+                TelefonoCliente = request.TelefonoCliente,
+                ServicioSolicitado = request.Servicio,
+                NotaInterna = request.Nota,
+                Estado = TurnoEstado.Confirmado,
                 Version = 1
             };
 
-        await _turnoRepository
-            .CrearAsync(turno);
-
+        await _turnoRepository.CrearAsync(turno);
         return Ok(turno);
     }
 }

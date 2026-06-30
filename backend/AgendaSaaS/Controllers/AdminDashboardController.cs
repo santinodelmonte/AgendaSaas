@@ -64,8 +64,8 @@ public class AdminDashboardController : ControllerBase
         return Ok(new
         {
             turnosPendientes = pendientes,
-            turnosConfirmadosHoy = confirmadosHoy,
-            turnosConfirmadosMes = confirmadosMes,
+            confirmadosHoy = confirmadosHoy,
+            confirmadosMes = confirmadosMes,
             proximoTurno = proximoTurno is null
                 ? null
                 : new

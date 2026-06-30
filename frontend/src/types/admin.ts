@@ -39,3 +39,13 @@ export type AgendaItem = {
   servicio: string;
   estado: 'Pendiente' | 'Confirmado' | 'Rechazado' | string;
 };
+
+export type AgendaSlot = {
+  fechaHora: string;
+  estado: 'Disponible' | 'Pendiente' | 'Confirmado' | 'Rechazado';
+  id?: string | null;
+  nombreCliente?: string | null;
+  telefonoCliente?: string | null;
+  servicioSolicitado?: string | null;
+  notaInterna?: string | null;
+};

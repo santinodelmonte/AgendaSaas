@@ -1,5 +1,5 @@
 import api from './axios';
-import type { AgendaItem, DashboardStats, Horario, PerfilAdmin, TurnoPendiente } from '../types/admin';
+import type { AgendaItem, AgendaSlot, DashboardStats, Horario, PerfilAdmin, TurnoPendiente } from '../types/admin';
 
 export async function getAdminDashboard() {
   const { data } = await api.get<DashboardStats>('/api/admin/dashboard');
@@ -58,5 +58,26 @@ export async function getAgendaDiaria(fecha: string) {
 
 export async function getAgendaSemanal(fechaInicio: string) {
   const { data } = await api.get<AgendaItem[]>('/api/admin/agenda/semana', { params: { fechaInicio } });
+  return data;
+}
+
+export async function getAgendaSlots(fecha: string) {
+  const { data } = await api.get<AgendaSlot[]>('/api/admin/agenda/slots', { params: { fecha } });
+  return data;
+}
+
+export async function cancelarTurno(id: string) {
+  const { data } = await api.post(`/api/admin/turnos/cancelar/${id}`);
+  return data;
+}
+
+export async function crearTurnoManual(body: {
+  fechaHora: string;
+  nombreCliente?: string;
+  telefonoCliente?: string;
+  servicio?: string;
+  nota?: string;
+}) {
+  const { data } = await api.post('/api/admin/turnos/crear-manual', body);
   return data;
 }
