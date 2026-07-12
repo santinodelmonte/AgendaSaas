@@ -40,7 +40,8 @@ public class TurnoRepository : ITurnoRepository
             NotaInterna,
             Estado,
             FechaCreacionPendiente,
-            Version
+            Version,
+            DuracionMinutos
         FROM Turnos
         WHERE TenantId = @TenantId
           AND FechaHora >= @Inicio
@@ -96,7 +97,8 @@ public class TurnoRepository : ITurnoRepository
             NotaInterna,
             Estado,
             FechaCreacionPendiente,
-            Version
+            Version,
+            DuracionMinutos
         FROM Turnos
         WHERE TenantId = @TenantId
           AND FechaHora = @FechaHora
@@ -143,7 +145,8 @@ public class TurnoRepository : ITurnoRepository
             NotaInterna,
             Estado,
             FechaCreacionPendiente,
-            Version
+            Version,
+            DuracionMinutos
         FROM Turnos
         WHERE Id = @Id
         LIMIT 1
@@ -187,7 +190,8 @@ public class TurnoRepository : ITurnoRepository
             NotaInterna,
             Estado,
             FechaCreacionPendiente,
-            Version
+            Version,
+            DuracionMinutos
         FROM Turnos
         WHERE TenantId = @TenantId
           AND Estado = @Estado
@@ -316,7 +320,8 @@ public class TurnoRepository : ITurnoRepository
             NotaInterna,
             Estado,
             FechaCreacionPendiente,
-            Version
+            Version,
+            DuracionMinutos
         FROM Turnos
         WHERE TenantId = @TenantId
           AND Estado = @Estado
@@ -370,7 +375,8 @@ public class TurnoRepository : ITurnoRepository
             NotaInterna,
             Estado,
             FechaCreacionPendiente,
-            Version
+            Version,
+            DuracionMinutos
         )
         VALUES
         (
@@ -383,7 +389,8 @@ public class TurnoRepository : ITurnoRepository
             @NotaInterna,
             @Estado,
             @FechaCreacionPendiente,
-            @Version
+            @Version,
+            @DuracionMinutos
         )
         """;
 
@@ -405,6 +412,7 @@ public class TurnoRepository : ITurnoRepository
         command.Parameters.AddWithValue("@Estado", (int)turno.Estado);
         command.Parameters.AddWithValue("@FechaCreacionPendiente", (object?)turno.FechaCreacionPendiente ?? DBNull.Value);
         command.Parameters.AddWithValue("@Version", version);
+        command.Parameters.AddWithValue("@DuracionMinutos", (object?)turno.DuracionMinutos ?? DBNull.Value);
 
         await command.ExecuteNonQueryAsync();
 
@@ -423,12 +431,14 @@ public class TurnoRepository : ITurnoRepository
         """
         UPDATE Turnos
         SET
+            FechaHora = @FechaHora,
             NombreCliente = @NombreCliente,
             TelefonoCliente = @TelefonoCliente,
             ServicioSolicitado = @ServicioSolicitado,
             NotaInterna = @NotaInterna,
             Estado = @Estado,
             FechaCreacionPendiente = @FechaCreacionPendiente,
+            DuracionMinutos = @DuracionMinutos,
             Version = Version + 1
         WHERE Id = @Id
         """;
@@ -437,16 +447,96 @@ public class TurnoRepository : ITurnoRepository
             new MySqlCommand(sql, connection);
 
         command.Parameters.AddWithValue("@Id", turno.Id.ToString());
+        command.Parameters.AddWithValue("@FechaHora", turno.FechaHora);
         command.Parameters.AddWithValue("@NombreCliente", (object?)turno.NombreCliente ?? DBNull.Value);
         command.Parameters.AddWithValue("@TelefonoCliente", (object?)turno.TelefonoCliente ?? DBNull.Value);
         command.Parameters.AddWithValue("@ServicioSolicitado", (object?)turno.ServicioSolicitado ?? DBNull.Value);
         command.Parameters.AddWithValue("@NotaInterna", (object?)turno.NotaInterna ?? DBNull.Value);
         command.Parameters.AddWithValue("@Estado", (int)turno.Estado);
         command.Parameters.AddWithValue("@FechaCreacionPendiente", (object?)turno.FechaCreacionPendiente ?? DBNull.Value);
+        command.Parameters.AddWithValue("@DuracionMinutos", (object?)turno.DuracionMinutos ?? DBNull.Value);
 
         await command.ExecuteNonQueryAsync();
 
         turno.Version += 1;
+    }
+
+    public async Task<List<Turno>> ObtenerHistorialAsync(
+        Guid tenantId,
+        int pagina,
+        int tamano)
+    {
+        var resultado = new List<Turno>();
+
+        using var connection = _factory.CreateConnection();
+        await connection.OpenAsync();
+
+        var offset = (pagina - 1) * tamano;
+
+        var sql =
+        """
+        SELECT
+            Id, TenantId, FechaHora, NombreCliente, TelefonoCliente,
+            ServicioSolicitado, NotaInterna, Estado, FechaCreacionPendiente, Version, DuracionMinutos
+        FROM Turnos
+        WHERE TenantId = @TenantId
+          AND Estado != 0
+          AND FechaHora < NOW()
+        ORDER BY FechaHora DESC
+        LIMIT @Tamano OFFSET @Offset
+        """;
+
+        using var command = new MySqlCommand(sql, connection);
+        command.Parameters.AddWithValue("@TenantId", tenantId.ToString());
+        command.Parameters.AddWithValue("@Tamano", tamano);
+        command.Parameters.AddWithValue("@Offset", offset);
+
+        using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+            resultado.Add(MapearTurno(reader));
+
+        return resultado;
+    }
+
+    public async Task<int> ExpirarPendientesAsync(
+        TimeSpan maxEdad)
+    {
+        using var connection =
+            _factory.CreateConnection();
+
+        await connection.OpenAsync();
+
+        var limite = DateTime.UtcNow - maxEdad;
+
+        var sql =
+        """
+        UPDATE Turnos
+        SET
+            Estado = @Disponible,
+            NombreCliente = NULL,
+            TelefonoCliente = NULL,
+            ServicioSolicitado = NULL,
+            FechaCreacionPendiente = NULL,
+            DuracionMinutos = NULL,
+            Version = Version + 1
+        WHERE Estado = @Pendiente
+          AND FechaCreacionPendiente < @Limite
+        """;
+
+        using var command =
+            new MySqlCommand(sql, connection);
+
+        command.Parameters.AddWithValue(
+            "@Disponible", (int)TurnoEstado.Disponible);
+
+        command.Parameters.AddWithValue(
+            "@Pendiente", (int)TurnoEstado.Pendiente);
+
+        command.Parameters.AddWithValue(
+            "@Limite", limite);
+
+        return await command.ExecuteNonQueryAsync();
     }
 
     private static Turno MapearTurno(
@@ -488,7 +578,12 @@ public class TurnoRepository : ITurnoRepository
                     : reader.GetDateTime(8),
 
             Version =
-                reader.GetInt64(9)
+                reader.GetInt64(9),
+
+            DuracionMinutos =
+                reader.IsDBNull(10)
+                    ? null
+                    : reader.GetInt32(10)
         };
     }
 }

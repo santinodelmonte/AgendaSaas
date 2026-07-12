@@ -15,17 +15,20 @@ public class TurnosController : ControllerBase
     private readonly ITurnoRepository _turnoRepository;
     private readonly IBloqueRepository _bloqueRepository;
     private readonly IManicuristaRepository _manicuristaRepository;
+    private readonly IDiasBloqueadosRepository _diasBloqueadosRepository;
 
     public TurnosController(
         ITenantProvider tenantProvider,
         ITurnoRepository turnoRepository,
         IBloqueRepository bloqueRepository,
-        IManicuristaRepository manicuristaRepository)
+        IManicuristaRepository manicuristaRepository,
+        IDiasBloqueadosRepository diasBloqueadosRepository)
     {
         _tenantProvider = tenantProvider;
         _turnoRepository = turnoRepository;
         _bloqueRepository = bloqueRepository;
         _manicuristaRepository = manicuristaRepository;
+        _diasBloqueadosRepository = diasBloqueadosRepository;
     }
 
     [AllowAnonymous]
@@ -41,6 +44,12 @@ public class TurnosController : ControllerBase
 
         if (manicurista is null)
             return NotFound("Manicurista no encontrada.");
+
+        var diaBloqueado = await _diasBloqueadosRepository
+            .ObtenerPorFechaAsync(tenantId, fecha);
+
+        if (diaBloqueado != null)
+            return Ok(new List<TurnoDisponibleDto>());
 
         var bloques =
             await _bloqueRepository
@@ -83,10 +92,16 @@ public class TurnosController : ControllerBase
 
             if (!estaEnPausa)
             {
+                // Los turnos gestionados desde el admin pueden estar corridos de la
+                // grilla o durar más que un slot: se compara por solapamiento para
+                // no ofrecer horarios que en realidad están ocupados.
                 var turno =
                     turnosExistentes
-                        .FirstOrDefault(
-                            t => t.FechaHora == actual);
+                        .FirstOrDefault(t =>
+                            t.Estado is TurnoEstado.Pendiente or TurnoEstado.Confirmado
+                                ? actual < t.FechaHora.AddMinutes(t.DuracionMinutos ?? manicurista.DuracionTurnoMinutos)
+                                    && t.FechaHora < actual.AddMinutes(manicurista.DuracionTurnoMinutos)
+                                : t.FechaHora == actual);
 
                 resultado.Add(
                     new TurnoDisponibleDto
@@ -114,11 +129,26 @@ public class TurnosController : ControllerBase
         var tenantId =
             _tenantProvider.TenantId;
 
+        if (string.IsNullOrWhiteSpace(request.NombreCliente) || request.NombreCliente.Length > 100)
+            return BadRequest("El nombre debe tener entre 1 y 100 caracteres.");
+
+        if (string.IsNullOrWhiteSpace(request.TelefonoCliente) || request.TelefonoCliente.Length > 20)
+            return BadRequest("El teléfono debe tener entre 1 y 20 caracteres.");
+
+        if (string.IsNullOrWhiteSpace(request.Servicio) || request.Servicio.Length > 200)
+            return BadRequest("El servicio debe tener entre 1 y 200 caracteres.");
+
         if (request.FechaHora <= DateTime.Now)
-        {
-            return BadRequest(
-                "No se puede reservar un turno en el pasado.");
-        }
+            return BadRequest("No se puede reservar un turno en el pasado.");
+
+        if (request.FechaHora <= DateTime.Now.AddHours(2))
+            return BadRequest("Debés reservar con al menos 2 horas de anticipación.");
+
+        var diaBloqueadoSolicitar = await _diasBloqueadosRepository
+            .ObtenerPorFechaAsync(tenantId, request.FechaHora);
+
+        if (diaBloqueadoSolicitar != null)
+            return BadRequest("Ese día está bloqueado y no admite reservas.");
 
         var manicurista =
             await _manicuristaRepository
@@ -152,11 +182,24 @@ public class TurnosController : ControllerBase
                 "La hora solicitada no está disponible.");
         }
 
-        var turno =
+        var turnosDia =
             await _turnoRepository
-                .ObtenerPorFechaHoraAsync(
+                .ObtenerPorFechaAsync(
                     tenantId,
-                    request.FechaHora);
+                    request.FechaHora.Date);
+
+        var hayOcupadoSolapado =
+            turnosDia.Any(t =>
+                t.Estado is TurnoEstado.Pendiente or TurnoEstado.Confirmado &&
+                request.FechaHora < t.FechaHora.AddMinutes(t.DuracionMinutos ?? manicurista.DuracionTurnoMinutos) &&
+                t.FechaHora < request.FechaHora.AddMinutes(manicurista.DuracionTurnoMinutos));
+
+        if (hayOcupadoSolapado)
+            return BadRequest("El turno ya no está disponible.");
+
+        var turno =
+            turnosDia.FirstOrDefault(
+                t => t.FechaHora == request.FechaHora);
 
         if (turno != null)
         {

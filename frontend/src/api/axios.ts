@@ -9,16 +9,14 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  const { token, tenantId } = authStorage.get();
+  const { token } = authStorage.get();
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  if (tenantId) {
-    config.headers['X-Tenant-Id'] = tenantId;
-  }
-
+  // El tenant de los endpoints autenticados lo deriva el backend del JWT, no del
+  // cliente. La reserva pública (anónima) manda X-Tenant-Id explícito por request.
   return config;
 });
 

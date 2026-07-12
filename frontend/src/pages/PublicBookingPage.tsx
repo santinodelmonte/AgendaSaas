@@ -3,12 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { MessageCircle, CalendarDays } from 'lucide-react';
 import {
   getPublicPerfil,
+  getPublicServicios,
   getTurnosDisponibles,
   solicitarTurno,
 } from '../api/public.service';
 import type {
   DisponibilidadTurno,
   PublicPerfil,
+  PublicServicio,
 } from '../types/public';
 import { Loading } from '../components/common/Loading';
 import { EmptyState } from '../components/common/EmptyState';
@@ -24,9 +26,8 @@ export function PublicBookingPage() {
   const [perfil, setPerfil] = useState<PublicPerfil | null>(null);
   const [tenantId, setTenantId] = useState('');
 
-  const [fecha, setFecha] = useState(
-    toDateInputValue(new Date())
-  );
+  const hoy = toDateInputValue(new Date());
+  const [fecha, setFecha] = useState(hoy);
 
   const [horarios, setHorarios] =
     useState<DisponibilidadTurno[]>([]);
@@ -49,6 +50,9 @@ export function PublicBookingPage() {
   const [servicio, setServicio] =
     useState('');
 
+  const [serviciosDisponibles, setServiciosDisponibles] =
+    useState<PublicServicio[]>([]);
+
   useEffect(() => {
     let mounted = true;
 
@@ -64,6 +68,8 @@ export function PublicBookingPage() {
         if (!mounted) return;
 
         setPerfil(perfilData);
+
+        getPublicServicios(slug).then(setServiciosDisponibles).catch(() => {});
 
         const currentTenantId =
           perfilData.tenantId;
@@ -167,18 +173,42 @@ export function PublicBookingPage() {
       : '#';
   }, [perfil?.whatsApp]);
 
+  const TELEFONO_RE = /^[\d\s\+\-\(\)]{7,20}$/;
+
   const onSubmit = async (
     e: React.FormEvent
   ) => {
     e.preventDefault();
 
     if (!selectedSlot) {
-      toast.pushToast({
-        type: 'error',
-        message:
-          'Selecciona un horario disponible.',
-      });
+      toast.pushToast({ type: 'error', message: 'Seleccioná un horario disponible.' });
+      return;
+    }
 
+    const slotDate = new Date(selectedSlot);
+    if (slotDate <= new Date()) {
+      toast.pushToast({ type: 'error', message: 'No podés reservar un turno en el pasado.' });
+      return;
+    }
+
+    const dosHoras = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    if (slotDate <= dosHoras) {
+      toast.pushToast({ type: 'error', message: 'Debés reservar con al menos 2 horas de anticipación.' });
+      return;
+    }
+
+    if (!nombreCliente.trim() || nombreCliente.length > 100) {
+      toast.pushToast({ type: 'error', message: 'El nombre debe tener entre 1 y 100 caracteres.' });
+      return;
+    }
+
+    if (!TELEFONO_RE.test(telefonoCliente)) {
+      toast.pushToast({ type: 'error', message: 'Ingresá un teléfono válido (7-20 dígitos).' });
+      return;
+    }
+
+    if (!servicio.trim() || servicio.length > 200) {
+      toast.pushToast({ type: 'error', message: 'El servicio debe tener entre 1 y 200 caracteres.' });
       return;
     }
 
@@ -202,10 +232,9 @@ export function PublicBookingPage() {
             nombreCliente,
             telefonoCliente,
             servicio,
-            fechaHora:
-              selectedSlot,
-            nombre:
-              perfil?.nombre,
+            fechaHora: selectedSlot,
+            nombre: perfil?.nombre,
+            duracionMinutos: perfil?.duracionTurnoMinutos,
           },
         }
       );
@@ -290,11 +319,11 @@ export function PublicBookingPage() {
             <input
               type="date"
               value={fecha}
-              onChange={(e) =>
-                setFecha(
-                  e.target.value
-                )
-              }
+              min={hoy}
+              onChange={(e) => {
+                setFecha(e.target.value);
+                setSelectedSlot('');
+              }}
               className="h-11 rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-brand-500"
             />
           </div>
@@ -306,6 +335,12 @@ export function PublicBookingPage() {
               horarios={horarios}
               value={selectedSlot}
               onChange={setSelectedSlot}
+              onOcupado={() =>
+                toast.pushToast({
+                  type: 'error',
+                  message: 'Ese horario ya está reservado. Elegí otro.',
+                })
+              }
             />
           ) : (
             <EmptyState
@@ -365,14 +400,29 @@ export function PublicBookingPage() {
                 Servicio
               </span>
 
-              <input
-                required
-                value={servicio}
-                onChange={(e) =>
-                  setServicio(e.target.value)
-                }
-                className="h-12 w-full rounded-2xl border border-slate-300 px-4 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
-              />
+              {serviciosDisponibles.length > 0 ? (
+                <select
+                  required
+                  value={servicio}
+                  onChange={(e) => setServicio(e.target.value)}
+                  className="h-12 w-full rounded-2xl border border-slate-300 px-4 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+                >
+                  <option value="">Seleccioná un servicio…</option>
+                  {serviciosDisponibles.map((s) => (
+                    <option key={s.id} value={s.nombre}>
+                      {s.nombre} — ${s.precio.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  required
+                  value={servicio}
+                  onChange={(e) => setServicio(e.target.value)}
+                  placeholder="Ej: Kapping gel"
+                  className="h-12 w-full rounded-2xl border border-slate-300 px-4 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+                />
+              )}
             </label>
           </div>
 

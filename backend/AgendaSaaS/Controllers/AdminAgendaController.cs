@@ -13,17 +13,20 @@ public class AdminAgendaController : ControllerBase
     private readonly ITurnoRepository _turnoRepository;
     private readonly IBloqueRepository _bloqueRepository;
     private readonly IManicuristaRepository _manicuristaRepository;
+    private readonly IDiasBloqueadosRepository _diasBloqueadosRepository;
 
     public AdminAgendaController(
         ITenantProvider tenantProvider,
         ITurnoRepository turnoRepository,
         IBloqueRepository bloqueRepository,
-        IManicuristaRepository manicuristaRepository)
+        IManicuristaRepository manicuristaRepository,
+        IDiasBloqueadosRepository diasBloqueadosRepository)
     {
         _tenantProvider = tenantProvider;
         _turnoRepository = turnoRepository;
         _bloqueRepository = bloqueRepository;
         _manicuristaRepository = manicuristaRepository;
+        _diasBloqueadosRepository = diasBloqueadosRepository;
     }
 
     [HttpGet]
@@ -49,8 +52,33 @@ public class AdminAgendaController : ControllerBase
                     t.NombreCliente,
                     t.TelefonoCliente,
                     t.ServicioSolicitado,
-                    t.NotaInterna
+                    t.NotaInterna,
+                    t.DuracionMinutos
                 });
+
+        return Ok(resultado);
+    }
+
+    [HttpGet("historial")]
+    public async Task<IActionResult> ObtenerHistorial(
+        [FromQuery] int pagina = 1,
+        [FromQuery] int tamano = 20)
+    {
+        var tenantId = _tenantProvider.TenantId;
+
+        var turnos = await _turnoRepository
+            .ObtenerHistorialAsync(tenantId, pagina, tamano);
+
+        var resultado = turnos.Select(t => new
+        {
+            t.Id,
+            t.FechaHora,
+            Estado = t.Estado.ToString(),
+            t.NombreCliente,
+            t.TelefonoCliente,
+            t.ServicioSolicitado,
+            t.NotaInterna
+        });
 
         return Ok(resultado);
     }
@@ -60,6 +88,12 @@ public class AdminAgendaController : ControllerBase
         [FromQuery] DateTime fecha)
     {
         var tenantId = _tenantProvider.TenantId;
+
+        var diaBloqueado = await _diasBloqueadosRepository
+            .ObtenerPorFechaAsync(tenantId, fecha);
+
+        if (diaBloqueado != null)
+            return Ok(new { bloqueado = true, motivo = diaBloqueado.Motivo, slots = new List<object>() });
 
         var manicurista =
             await _manicuristaRepository
@@ -99,7 +133,13 @@ public class AdminAgendaController : ControllerBase
 
             if (!enPausa)
             {
-                var turno = turnos.FirstOrDefault(t => t.FechaHora == actual);
+                // Los turnos ocupados pueden estar corridos de la grilla o durar más
+                // que un slot (reprogramación manual), por eso se compara por solapamiento.
+                var turno = turnos.FirstOrDefault(t =>
+                    t.Estado is TurnoEstado.Pendiente or TurnoEstado.Confirmado
+                        ? actual < t.FechaHora.AddMinutes(t.DuracionMinutos ?? manicurista.DuracionTurnoMinutos)
+                            && t.FechaHora < actual.AddMinutes(manicurista.DuracionTurnoMinutos)
+                        : t.FechaHora == actual);
 
                 resultado.Add(new
                 {
@@ -110,14 +150,15 @@ public class AdminAgendaController : ControllerBase
                     NombreCliente = turno?.NombreCliente,
                     TelefonoCliente = turno?.TelefonoCliente,
                     ServicioSolicitado = turno?.ServicioSolicitado,
-                    NotaInterna = turno?.NotaInterna
+                    NotaInterna = turno?.NotaInterna,
+                    DuracionMinutos = turno?.DuracionMinutos
                 });
             }
 
             actual = actual.AddMinutes(manicurista.DuracionTurnoMinutos);
         }
 
-        return Ok(resultado);
+        return Ok(new { bloqueado = false, motivo = (string?)null, slots = resultado });
     }
 
     [HttpGet("semana")]
@@ -150,7 +191,8 @@ public class AdminAgendaController : ControllerBase
                         t.NombreCliente,
                         t.TelefonoCliente,
                         t.ServicioSolicitado,
-                        t.NotaInterna
+                        t.NotaInterna,
+                        t.DuracionMinutos
                     })
                     .ToList();
 

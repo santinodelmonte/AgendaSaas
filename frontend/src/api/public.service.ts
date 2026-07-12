@@ -1,5 +1,5 @@
 import api from './axios';
-import type { DisponibilidadTurno, PublicPerfil, SolicitarTurnoRequest } from '../types/public';
+import type { DisponibilidadTurno, PublicPerfil, PublicServicio, SolicitarTurnoRequest } from '../types/public';
 
 export async function getPublicPerfil(slug: string) {
   const { data } = await api.get<PublicPerfil>(`/api/public/perfil/${slug}`);
@@ -11,6 +11,11 @@ export async function getTurnosDisponibles(fecha: string, tenantId?: string) {
     params: { fecha },
     headers: tenantId ? { 'X-Tenant-Id': tenantId } : undefined,
   });
+  return data;
+}
+
+export async function getPublicServicios(slug: string) {
+  const { data } = await api.get<PublicServicio[]>(`/api/public/servicios/${slug}`);
   return data;
 }
 

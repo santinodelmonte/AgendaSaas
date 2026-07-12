@@ -1,14 +1,13 @@
 import { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Loading } from '../components/common/Loading';
 import { useToast } from '../contexts/ToastContext';
+import { homeForRole } from '../utils/roles';
 
 export function LoginPage() {
-  const { signIn, isAuthenticated, isInitializing } = useAuth();
+  const { signIn, isAuthenticated, isInitializing, rol } = useAuth();
   const toast = useToast();
-  const location = useLocation();
-  const from = (location.state as { from?: Location })?.from?.pathname ?? '/admin';
 
   const [email, setEmail] = useState('admin@maria.com');
   const [password, setPassword] = useState('123456');
@@ -16,7 +15,7 @@ export function LoginPage() {
 
   if (isInitializing) return <Loading fullScreen />;
 
-  if (isAuthenticated) return <Navigate to={from} replace />;
+  if (isAuthenticated) return <Navigate to={homeForRole(rol)} replace />;
 
   const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

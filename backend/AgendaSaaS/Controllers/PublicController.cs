@@ -9,21 +9,21 @@ namespace AgendaSaaS.Controllers;
 [AllowAnonymous]
 public class PublicController : ControllerBase
 {
-    private readonly IManicuristaRepository _repository;
+    private readonly IManicuristaRepository _manicuristas;
+    private readonly IServicioRepository _servicios;
 
     public PublicController(
-        IManicuristaRepository repository)
+        IManicuristaRepository manicuristas,
+        IServicioRepository servicios)
     {
-        _repository = repository;
+        _manicuristas = manicuristas;
+        _servicios = servicios;
     }
 
     [HttpGet("perfil/{slug}")]
-    public async Task<IActionResult> ObtenerPerfil(
-        string slug)
+    public async Task<IActionResult> ObtenerPerfil(string slug)
     {
-        var manicurista =
-            await _repository
-                .ObtenerPorSlugAsync(slug);
+        var manicurista = await _manicuristas.ObtenerPorSlugAsync(slug);
 
         if (manicurista is null)
             return NotFound();
@@ -36,5 +36,18 @@ public class PublicController : ControllerBase
             manicurista.WhatsApp,
             manicurista.DuracionTurnoMinutos
         });
+    }
+
+    [HttpGet("servicios/{slug}")]
+    public async Task<IActionResult> ObtenerServicios(string slug)
+    {
+        var manicurista = await _manicuristas.ObtenerPorSlugAsync(slug);
+
+        if (manicurista is null)
+            return NotFound();
+
+        var servicios = await _servicios.ObtenerActivosPorTenantAsync(manicurista.TenantId);
+
+        return Ok(servicios.Select(s => new { s.Id, s.Nombre, s.Precio }));
     }
 }

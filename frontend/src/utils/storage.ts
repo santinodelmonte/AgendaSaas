@@ -1,7 +1,10 @@
+import type { UsuarioRol } from '../types/auth';
+
 export type AuthSession = {
   token: string;
   email: string;
   tenantId: string;
+  rol: UsuarioRol;
 };
 
 const AUTH_KEY = 'agendasaas_auth';

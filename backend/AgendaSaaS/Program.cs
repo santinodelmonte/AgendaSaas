@@ -52,7 +52,11 @@ builder.Services.AddCors(options =>
         policy
             .WithOrigins(
                 "http://localhost:5173",
-                "http://127.0.0.1:5173"
+                "http://localhost:5174",
+                "http://localhost:5175",
+                "http://127.0.0.1:5173",
+                "http://127.0.0.1:5174",
+                "http://127.0.0.1:5175"
             )
             .AllowAnyHeader()
             .AllowAnyMethod();
@@ -67,8 +71,13 @@ builder.Services.AddScoped<IManicuristaRepository, ManicuristaRepository>();
 builder.Services.AddScoped<IBloqueRepository, BloqueRepository>();
 builder.Services.AddScoped<ITurnoRepository, TurnoRepository>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IDiasBloqueadosRepository, DiasBloqueadosRepository>();
+builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
+builder.Services.AddScoped<ISuperAdminRepository, SuperAdminRepository>();
 
 builder.Services.AddScoped<IJwtService, JwtService>();
+
+builder.Services.AddHostedService<TurnoExpirationService>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -117,15 +126,27 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+await SchemaMigrations.AplicarAsync(
+    app.Services.GetRequiredService<SqlConnectionFactory>());
+
+using (var scope = app.Services.CreateScope())
+{
+    await SuperAdminSeeder.SembrarAsync(
+        scope.ServiceProvider.GetRequiredService<IUsuarioRepository>(),
+        app.Configuration,
+        app.Services.GetRequiredService<ILoggerFactory>()
+            .CreateLogger("SuperAdminSeeder"));
+}
+
 app.UseSwagger();
 app.UseSwaggerUI();
 
-app.UseHttpsRedirection();
-
 //
-// CORS debe ejecutarse antes de Authentication
+// CORS debe ejecutarse antes de Authentication y de HttpsRedirection
 //
 app.UseCors("AgendaSaaS");
+
+app.UseHttpsRedirection();
 
 app.UseAuthentication();
 

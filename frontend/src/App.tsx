@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { LayoutAdmin } from './layouts/LayoutAdmin';
+import { LayoutSuperAdmin } from './layouts/LayoutSuperAdmin';
 import { LayoutPublico } from './layouts/LayoutPublico';
 import { ProtectedRoute } from './routes/ProtectedRoute';
 import { PublicOnlyRoute } from './routes/PublicOnlyRoute';
@@ -13,6 +14,10 @@ import { AdminHorariosPage } from './pages/admin/AdminHorariosPage';
 import { AdminTurnosPendientesPage } from './pages/admin/AdminTurnosPendientesPage';
 import { AdminAgendaDiariaPage } from './pages/admin/AdminAgendaDiariaPage';
 import { AdminAgendaSemanalPage } from './pages/admin/AdminAgendaSemanalPage';
+import { AdminHistorialPage } from './pages/admin/AdminHistorialPage';
+import { AdminDiasBloqueadosPage } from './pages/admin/AdminDiasBloqueadosPage';
+import { AdminConfiguracionPage } from './pages/admin/AdminConfiguracionPage';
+import { SuperAdminManicuristasPage } from './pages/superadmin/SuperAdminManicuristasPage';
 
 export default function App() {
   return (
@@ -23,9 +28,20 @@ export default function App() {
         <Route path="/agenda/:slug/exito" element={<LayoutPublico><BookingSuccessPage /></LayoutPublico>} />
 
         <Route
+          path="/superadmin"
+          element={
+            <ProtectedRoute role="SuperAdmin">
+              <LayoutSuperAdmin />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<SuperAdminManicuristasPage />} />
+        </Route>
+
+        <Route
           path="/admin"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute role="Manicurista">
               <LayoutAdmin />
             </ProtectedRoute>
           }
@@ -36,6 +52,9 @@ export default function App() {
           <Route path="turnos-pendientes" element={<AdminTurnosPendientesPage />} />
           <Route path="agenda-diaria" element={<AdminAgendaDiariaPage />} />
           <Route path="agenda-semanal" element={<AdminAgendaSemanalPage />} />
+          <Route path="historial" element={<AdminHistorialPage />} />
+          <Route path="dias-bloqueados" element={<AdminDiasBloqueadosPage />} />
+          <Route path="configuracion" element={<AdminConfiguracionPage />} />
         </Route>
 
         <Route path="/" element={<Navigate to="/login" replace />} />
