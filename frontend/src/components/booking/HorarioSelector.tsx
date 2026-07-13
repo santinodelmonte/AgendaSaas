@@ -5,9 +5,10 @@ type Props = {
   horarios: DisponibilidadTurno[];
   value?: string;
   onChange: (value: string) => void;
+  onOcupado?: () => void;
 };
 
-export function HorarioSelector({ horarios, value, onChange }: Props) {
+export function HorarioSelector({ horarios, value, onChange, onOcupado }: Props) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
       {horarios.map((item) => {
@@ -18,8 +19,13 @@ export function HorarioSelector({ horarios, value, onChange }: Props) {
           <button
             key={item.fechaHora}
             type="button"
-            onClick={() => !disabled && onChange(item.fechaHora)}
-            disabled={disabled}
+            onClick={() => {
+              if (disabled) {
+                onOcupado?.();
+              } else {
+                onChange(item.fechaHora);
+              }
+            }}
             className={`rounded-2xl border px-4 py-4 text-sm font-semibold transition ${
               active
                 ? 'border-brand-600 bg-brand-600 text-white shadow-soft'

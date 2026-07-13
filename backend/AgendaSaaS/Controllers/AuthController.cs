@@ -64,11 +64,13 @@ public class AuthController : ControllerBase
         {
             token,
             usuario.Email,
-            usuario.TenantId
+            usuario.TenantId,
+            Rol = usuario.Rol.ToString()
         });
     }
 
     [HttpPost("crear-admin")]
+    [Authorize(Roles = "SuperAdmin")]
     public async Task<IActionResult> CrearAdmin(
     CrearAdminRequest request)
     {
@@ -92,7 +94,8 @@ public class AuthController : ControllerBase
                 PasswordHash =
                     BCrypt.Net.BCrypt.HashPassword(
                         request.Password),
-                Activo = true
+                Activo = true,
+                Rol = UsuarioRol.Manicurista
             };
 
         await _usuarioRepository

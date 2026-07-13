@@ -50,7 +50,11 @@ public class JwtService : IJwtService
 
                 new Claim(
                     JwtRegisteredClaimNames.Email,
-                    usuario.Email)
+                    usuario.Email),
+
+                new Claim(
+                    ClaimTypes.Role,
+                    usuario.Rol.ToString())
             };
 
         var token =

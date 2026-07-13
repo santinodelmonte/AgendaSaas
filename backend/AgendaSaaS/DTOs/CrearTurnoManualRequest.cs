@@ -11,4 +11,6 @@ public class CrearTurnoManualRequest
     public string? Servicio { get; set; }
 
     public string Nota { get; set; } = string.Empty;
+
+    public int? DuracionMinutos { get; set; }
 }

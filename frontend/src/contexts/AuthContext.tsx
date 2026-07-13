@@ -1,14 +1,16 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { LoginRequest } from '../types/auth';
+import type { LoginRequest, UsuarioRol } from '../types/auth';
 import { login } from '../api/auth.service';
 import { authStorage } from '../utils/storage';
+import { homeForRole } from '../utils/roles';
 
 type AuthContextValue = {
   token: string | null;
   email: string | null;
   tenantId: string | null;
+  rol: UsuarioRol | null;
   isAuthenticated: boolean;
   isInitializing: boolean;
   signIn: (credentials: LoginRequest) => Promise<void>;
@@ -23,12 +25,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [tenantId, setTenantId] = useState<string | null>(null);
+  const [rol, setRol] = useState<UsuarioRol | null>(null);
 
   useEffect(() => {
     const session = authStorage.get();
     setToken(session.token ?? null);
     setEmail(session.email ?? null);
     setTenantId(session.tenantId ?? null);
+    setRol(session.rol ?? null);
     setIsInitializing(false);
   }, []);
 
@@ -37,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setToken(null);
       setEmail(null);
       setTenantId(null);
+      setRol(null);
     };
     window.addEventListener('auth:expired', onExpired as EventListener);
     return () => window.removeEventListener('auth:expired', onExpired as EventListener);
@@ -48,7 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(data.token);
     setEmail(data.email);
     setTenantId(data.tenantId);
-    navigate('/admin', { replace: true });
+    setRol(data.rol);
+    navigate(homeForRole(data.rol), { replace: true });
   };
 
   const signOut = () => {
@@ -56,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     setEmail(null);
     setTenantId(null);
+    setRol(null);
     navigate('/login', { replace: true });
   };
 
@@ -64,12 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       token,
       email,
       tenantId,
+      rol,
       isAuthenticated: Boolean(token),
       isInitializing,
       signIn,
       signOut,
     }),
-    [token, email, tenantId, isInitializing],
+    [token, email, tenantId, rol, isInitializing],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

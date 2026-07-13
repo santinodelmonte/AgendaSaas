@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { CalendarRange, CalendarSearch, LayoutDashboard, Menu, Settings2, X, Clock3 } from 'lucide-react';
+import { CalendarRange, CalendarSearch, History, LayoutDashboard, Menu, Settings2, X } from 'lucide-react';
 
 const items = [
-  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/admin/perfil', label: 'Perfil', icon: Settings2 },
-  { to: '/admin/horarios', label: 'Horarios', icon: Clock3 },
-  { to: '/admin/turnos-pendientes', label: 'Turnos', icon: CalendarSearch },
-  { to: '/admin/agenda-diaria', label: 'Agenda diaria', icon: CalendarRange },
-  { to: '/admin/agenda-semanal', label: 'Agenda semanal', icon: CalendarRange },
+  { to: '/admin',                  label: 'Dashboard',      icon: LayoutDashboard, end: true },
+  { to: '/admin/configuracion',    label: 'Configuración',  icon: Settings2 },
+  { to: '/admin/turnos-pendientes',label: 'Turnos',         icon: CalendarSearch },
+  { to: '/admin/agenda-diaria',    label: 'Agenda diaria',  icon: CalendarRange },
+  { to: '/admin/agenda-semanal',   label: 'Agenda semanal', icon: CalendarRange },
+  { to: '/admin/historial',        label: 'Historial',      icon: History },
 ];
 
 export function SidebarMobile() {

@@ -1,0 +1,24 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependencies / build output
+node_modules
+dist
+dist-ssr
+*.local
+
+# TypeScript incremental build info y config emitida por tsc
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+# Editores
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store

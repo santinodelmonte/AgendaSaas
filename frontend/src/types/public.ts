@@ -17,3 +17,9 @@ export type SolicitarTurnoRequest = {
   telefonoCliente: string;
   servicio: string;
 };
+
+export type PublicServicio = {
+  id: string;
+  nombre: string;
+  precio: number;
+};

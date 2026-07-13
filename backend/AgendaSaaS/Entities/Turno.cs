@@ -20,5 +20,8 @@ public class Turno
 
     public DateTime? FechaCreacionPendiente { get; set; }
 
+    // Null = usa la duración por defecto de la manicurista (DuracionTurnoMinutos)
+    public int? DuracionMinutos { get; set; }
+
     public long Version { get; set; }
 }

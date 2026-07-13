@@ -29,7 +29,8 @@ public class UsuarioRepository : IUsuarioRepository
             TenantId,
             Email,
             PasswordHash,
-            Activo
+            Activo,
+            Rol
         FROM Usuarios
         WHERE Email = @Email
         LIMIT 1
@@ -61,7 +62,10 @@ public class UsuarioRepository : IUsuarioRepository
                 reader.GetString(3),
 
             Activo =
-                reader.GetBoolean(4)
+                reader.GetBoolean(4),
+
+            Rol =
+                (UsuarioRol)reader.GetInt32(5)
         };
 
     }
@@ -81,7 +85,8 @@ public class UsuarioRepository : IUsuarioRepository
         TenantId,
         Email,
         PasswordHash,
-        Activo
+        Activo,
+        Rol
     )
     VALUES
     (
@@ -89,7 +94,8 @@ public class UsuarioRepository : IUsuarioRepository
         @TenantId,
         @Email,
         @PasswordHash,
-        @Activo
+        @Activo,
+        @Rol
     )
     """;
 
@@ -115,6 +121,10 @@ public class UsuarioRepository : IUsuarioRepository
         command.Parameters.AddWithValue(
             "@Activo",
             usuario.Activo);
+
+        command.Parameters.AddWithValue(
+            "@Rol",
+            (int)usuario.Rol);
 
         await command.ExecuteNonQueryAsync();
     }

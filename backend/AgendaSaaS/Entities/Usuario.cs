@@ -11,4 +11,6 @@ public class Usuario
     public string PasswordHash { get; set; } = string.Empty;
 
     public bool Activo { get; set; }
+
+    public UsuarioRol Rol { get; set; }
 }

@@ -35,4 +35,12 @@ public interface ITurnoRepository
 
     Task ActualizarAsync(
         Turno turno);
+
+    Task<int> ExpirarPendientesAsync(
+        TimeSpan maxEdad);
+
+    Task<List<Turno>> ObtenerHistorialAsync(
+        Guid tenantId,
+        int pagina,
+        int tamano);
 }
