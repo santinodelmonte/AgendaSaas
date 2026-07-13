@@ -21,9 +21,12 @@ public static class SuperAdminSeeder
         if (string.IsNullOrWhiteSpace(email) ||
             string.IsNullOrWhiteSpace(password))
         {
-            logger.LogWarning(
-                "SuperAdmin:Email/Password no configurados; no se sembró el superadmin.");
-            return;
+            // Fail-fast: sin credenciales de superadmin la app no arranca, en vez de
+            // quedar sin superadmin o sembrar uno con valores por defecto.
+            throw new InvalidOperationException(
+                "SuperAdmin:Email y SuperAdmin:Password son obligatorios. Configuralos " +
+                "por user-secrets o variables de entorno (SuperAdmin__Email / " +
+                "SuperAdmin__Password).");
         }
 
         var existente =
