@@ -1,18 +1,29 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { createAdminHorario, deleteAdminHorario, getAdminHorarios, updateAdminHorario } from '../../api/admin.service';
-import type { Horario } from '../../types/admin';
+import type { HorarioBody } from '../../types/admin';
 import { Loading } from '../../components/common/Loading';
 import { EmptyState } from '../../components/common/EmptyState';
 import { useToast } from '../../contexts/ToastContext';
+
+// Modelo de vista de esta pantalla (stub): usa nombre de día y un flag "activo"
+// que no forman parte del contrato real de la API. Se conserva el comportamiento
+// actual; los tipos solo se ajustan en el borde para que compile.
+type HorarioVM = {
+  id: string;
+  diaSemana: string;
+  horaInicio: string;
+  horaFin: string;
+  activo: boolean;
+};
 
 const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 export function AdminHorariosPage() {
   const toast = useToast();
-  const [items, setItems] = useState<Horario[]>([]);
+  const [items, setItems] = useState<HorarioVM[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<Horario | null>(null);
+  const [editing, setEditing] = useState<HorarioVM | null>(null);
   const [creating, setCreating] = useState(false);
 
   const emptyModel = useMemo(
@@ -28,7 +39,7 @@ export function AdminHorariosPage() {
     setLoading(true);
     try {
       const data = await getAdminHorarios();
-      setItems(data);
+      setItems(data as unknown as HorarioVM[]);
     } finally {
       setLoading(false);
     }
@@ -38,7 +49,7 @@ export function AdminHorariosPage() {
     e.preventDefault();
     try {
       setCreating(true);
-      await createAdminHorario(emptyModel);
+      await createAdminHorario(emptyModel as unknown as HorarioBody);
       toast.pushToast({ type: 'success', message: 'Horario creado.' });
       await load();
     } finally {
@@ -50,7 +61,7 @@ export function AdminHorariosPage() {
     e.preventDefault();
     if (!editing) return;
     try {
-      await updateAdminHorario(editing.id, editing);
+      await updateAdminHorario(editing.id, editing as unknown as HorarioBody);
       toast.pushToast({ type: 'success', message: 'Horario actualizado.' });
       setEditing(null);
       await load();
