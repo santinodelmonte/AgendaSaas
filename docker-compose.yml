@@ -1,0 +1,70 @@
+# Stack de producción para un VPS: MySQL + API + frontend + Caddy (HTTPS automático).
+#   1. cp .env.example .env  y completar los valores
+#   2. apuntar los DNS de DOMINIO_WEB y DOMINIO_API a la IP del servidor
+#   3. docker compose up -d --build
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      # Nombres de tabla sin distinción de mayúsculas, igual que MySQL en Windows:
+      # permite importar un dump de la base de desarrollo sin renombrar tablas.
+      - --lower-case-table-names=1
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?definir en .env}
+      MYSQL_DATABASE: agendasaas
+      MYSQL_USER: agendasaas
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?definir en .env}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: "Server=mysql;Database=agendasaas;Uid=agendasaas;Pwd=${MYSQL_PASSWORD};Charset=utf8mb4;"
+      Jwt__Key: ${JWT_KEY:?definir en .env}
+      SuperAdmin__Email: ${SUPERADMIN_EMAIL:?definir en .env}
+      SuperAdmin__Password: ${SUPERADMIN_PASSWORD:?definir en .env}
+      Cors__AllowedOrigins: https://${DOMINIO_WEB}
+      App__TimeZone: ${APP_TIMEZONE:-America/Argentina/Buenos_Aires}
+      ReverseProxy__Enabled: "true"
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: https://${DOMINIO_API:?definir en .env}
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      - api
+      - web
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMINIO_WEB: ${DOMINIO_WEB:?definir en .env}
+      DOMINIO_API: ${DOMINIO_API}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  mysql-data:
+  caddy-data:
+  caddy-config:

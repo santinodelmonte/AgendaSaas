@@ -1,0 +1,5 @@
+**/bin/
+**/obj/
+AgendaSaaS.Tests/
+**/appsettings.Development.json
+**/appsettings.Local.json

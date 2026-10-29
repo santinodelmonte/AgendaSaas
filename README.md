@@ -93,7 +93,29 @@ npm install
 npm run dev
 ```
 
-Ver `appsettings.Example.json` para la configuración completa.
+Ver `appsettings.Example.json` para la configuración completa. Con una base vacía, la API
+crea las tablas sola al arrancar.
+
+## Tests
+
+```bash
+# Backend: tests de integración (API completa contra un MySQL real; crean y borran
+# una base descartable). Sin la variable se omiten.
+export AGENDASAAS_TEST_MYSQL="Server=localhost;Uid=root;Pwd=;"
+dotnet test backend/AgendaSaaS.Tests/AgendaSaaS.Tests.csproj
+
+# Frontend
+cd frontend && npm test
+```
+
+Cubren reserva pública, anticipación mínima, reservas simultáneas, gestión de turnos,
+aislamiento entre tenants, superadmin, horarios y zona horaria. Corren en CI
+(`.github/workflows/ci.yml`) en cada push y PR.
+
+## Deploy
+
+Ver [`docs/DEPLOY.md`](docs/DEPLOY.md): stack con Docker Compose (MySQL + API + frontend +
+HTTPS automático), variables de entorno, backups y checklist para el alta del primer cliente.
 
 ---
 

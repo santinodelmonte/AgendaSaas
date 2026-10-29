@@ -1,0 +1,10 @@
+# Caddy obtiene y renueva los certificados HTTPS automáticamente.
+{$DOMINIO_WEB} {
+	encode gzip
+	reverse_proxy web:80
+}
+
+{$DOMINIO_API} {
+	encode gzip
+	reverse_proxy api:8080
+}
