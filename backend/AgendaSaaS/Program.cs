@@ -3,6 +3,7 @@ using AgendaSaaS.Middleware;
 using AgendaSaaS.Repositories;
 using AgendaSaaS.Security;
 using AgendaSaaS.Services;
+using AgendaSaaS.Services.Notificaciones;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -97,10 +98,19 @@ builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 builder.Services.AddScoped<IDiasBloqueadosRepository, DiasBloqueadosRepository>();
 builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 builder.Services.AddScoped<ISuperAdminRepository, SuperAdminRepository>();
+builder.Services.AddScoped<IPushSuscripcionRepository, PushSuscripcionRepository>();
 
 builder.Services.AddScoped<IJwtService, JwtService>();
 
 builder.Services.AddHostedService<TurnoExpirationService>();
+
+// Notificaciones push a la manicurista (nueva reserva).
+builder.Services.AddHttpClient(nameof(WebPushSender), client =>
+    client.Timeout = TimeSpan.FromSeconds(15));
+builder.Services.AddSingleton<VapidKeys>();
+builder.Services.AddSingleton<Notificador>();
+builder.Services.AddScoped<IPushSender, WebPushSender>();
+builder.Services.AddHostedService<NotificacionesWorker>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

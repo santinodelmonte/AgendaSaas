@@ -52,6 +52,8 @@ MySQL + API + frontend + [Caddy](https://caddyserver.com/) con HTTPS automático
 | `RateLimiting__LoginPorMinuto` | no | Intentos de login por IP y minuto. Default 10. |
 | `RateLimiting__ReservasPorHora` | no | Reservas públicas por IP y hora. Default 20. |
 | `Swagger__Enabled` | no | `true` para exponer Swagger en producción (por defecto solo en Development). |
+| `WebPush__Subject` | no | Contacto para los servicios de push. Default `mailto:<SuperAdmin__Email>`. |
+| `WebPush__PublicKey` / `WebPush__PrivateKey` | no | Claves VAPID fijas. Si no se definen, se generan y guardan en la base. |
 
 ## Migrar datos de desarrollo (opcional)
 
@@ -87,6 +89,23 @@ Copiar los backups fuera del servidor (S3, Google Drive, etc.) y probar restaura
    ajustar horarios y pausas, cargar servicios y precios, bloquear feriados/vacaciones.
 4. Compartirle su link público: `https://agenda.midominio.com/agenda/<slug>`
    (para la bio de Instagram / estado de WhatsApp).
+5. **Activar los avisos de reservas en su celular** (ver abajo).
+
+## Avisos de reservas
+
+- **A la manicurista (notificación push):** cada reserva nueva le llega al celular al
+  instante ("Nueva reserva 💅 Ana · lun 14/1 10:00 · Semipermanente"); al tocarla se abren
+  los pendientes. Gratis, sin cuentas externas: las claves VAPID se generan solas y se
+  guardan en la base (tabla `ConfiguracionSistema`). Requiere HTTPS.
+  - **iPhone (iOS 16.4+):** solo funciona con el panel instalado. En **Safari**:
+    entrar al panel → Compartir → **Agregar a pantalla de inicio** → abrir **Agenda** desde
+    el ícono nuevo → iniciar sesión → Configuración → **Activar notificaciones** → Permitir.
+    El panel muestra estos pasos si detecta un iPhone sin la app instalada.
+  - **Android:** Chrome → Configuración → **Activar notificaciones** → Permitir.
+  - El botón **Enviar prueba** confirma que llegan. Se puede activar en varios dispositivos.
+- **A la clienta (WhatsApp):** al confirmar, rechazar o cancelar un turno, el panel ofrece
+  "Enviar por WhatsApp" con el mensaje ya escrito (editable). Se abre el WhatsApp de la
+  manicurista y ella solo toca enviar: no hay costo ni integración con Meta.
 
 ## Checklist antes de anunciarlo
 
@@ -102,6 +121,7 @@ Copiar los backups fuera del servidor (S3, Google Drive, etc.) y probar restaura
 - **Una sola instancia de la API**: la protección contra doble reserva simultánea es un lock en
   memoria. Si en el futuro se escala a varias instancias, hay que moverla a la base
   (ej. `SELECT ... FOR UPDATE` o un índice único).
-- **Sin notificaciones**: la manicurista se entera de las reservas entrando al panel. Los turnos
-  pendientes sin confirmar se liberan solos a las 24 h.
+- **Avisos a la clienta semi-manuales**: el mensaje de WhatsApp lo envía la manicurista con un
+  toque. Los recordatorios automáticos requieren la API de WhatsApp Business (pendiente).
+  Los turnos pendientes sin confirmar se liberan solos a las 24 h.
 - **Cambiar la contraseña**: hoy solo la puede resetear el superadmin.

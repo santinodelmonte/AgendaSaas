@@ -6,9 +6,12 @@ import { Loading } from '../../components/common/Loading';
 import { EmptyState } from '../../components/common/EmptyState';
 import { formatDateTime } from '../../utils/date';
 import { useToast } from '../../contexts/ToastContext';
+import { useAvisoWhatsApp } from '../../contexts/AvisoWhatsAppContext';
+import type { TipoAviso } from '../../utils/whatsapp';
 
 export function AdminTurnosPendientesPage() {
   const toast = useToast();
+  const { ofrecerAviso } = useAvisoWhatsApp();
   const [items, setItems] = useState<TurnoPendiente[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,15 +28,24 @@ export function AdminTurnosPendientesPage() {
     load();
   }, []);
 
-  const onConfirm = async (id: string) => {
-    await confirmarTurno(id);
-    toast.pushToast({ type: 'success', message: 'Turno confirmado.' });
+  const avisar = (item: TurnoPendiente, tipo: TipoAviso) =>
+    ofrecerAviso({
+      tipo,
+      nombreCliente: item.nombreCliente,
+      telefonoCliente: item.telefonoCliente,
+      fechaHora: item.fechaHora,
+      servicio: item.servicioSolicitado,
+    });
+
+  const onConfirm = async (item: TurnoPendiente) => {
+    await confirmarTurno(item.id);
+    avisar(item, 'confirmado');
     await load();
   };
 
-  const onReject = async (id: string) => {
-    await rechazarTurno(id);
-    toast.pushToast({ type: 'success', message: 'Turno rechazado.' });
+  const onReject = async (item: TurnoPendiente) => {
+    await rechazarTurno(item.id);
+    avisar(item, 'rechazado');
     await load();
   };
 
@@ -54,16 +66,16 @@ export function AdminTurnosPendientesPage() {
                 <div>
                   <p className="text-lg font-semibold text-slate-900">{item.nombreCliente}</p>
                   <p className="text-sm text-slate-500">{item.telefonoCliente}</p>
-                  <p className="mt-2 text-sm text-slate-700">{item.servicio}</p>
+                  <p className="mt-2 text-sm text-slate-700">{item.servicioSolicitado}</p>
                   <p className="mt-1 text-sm font-medium text-slate-900">{formatDateTime(item.fechaHora)}</p>
                 </div>
 
                 <div className="flex gap-2">
-                  <button onClick={() => onConfirm(item.id)} className="inline-flex h-11 items-center gap-2 rounded-2xl bg-emerald-500 px-4 text-sm font-semibold text-white">
+                  <button onClick={() => onConfirm(item)} className="inline-flex h-11 items-center gap-2 rounded-2xl bg-emerald-500 px-4 text-sm font-semibold text-white">
                     <Check size={16} />
                     Confirmar
                   </button>
-                  <button onClick={() => onReject(item.id)} className="inline-flex h-11 items-center gap-2 rounded-2xl bg-rose-500 px-4 text-sm font-semibold text-white">
+                  <button onClick={() => onReject(item)} className="inline-flex h-11 items-center gap-2 rounded-2xl bg-rose-500 px-4 text-sm font-semibold text-white">
                     <X size={16} />
                     Rechazar
                   </button>

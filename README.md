@@ -73,6 +73,8 @@ En desarrollo activo.
 - [x] Panel superadmin
 - [x] Aislamiento de tenant atado al JWT
 - [ ] Parsing de reservas en lenguaje natural (IA)
+- [x] Avisos de reservas nuevas por notificación push (PWA instalable, iPhone y Android)
+- [x] Aviso a la clienta por WhatsApp al confirmar/rechazar/cancelar (mensaje prearmado)
 - [ ] Recordatorios automáticos por WhatsApp
 - [ ] Reportes de ingresos y clientes recurrentes
 

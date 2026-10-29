@@ -13,7 +13,7 @@ export function CalendarDay({ items }: Props) {
           <div className="flex items-center justify-between gap-4">
             <div>
               <p className="font-semibold text-slate-900">{item.nombreCliente}</p>
-              <p className="text-sm text-slate-500">{item.servicio}</p>
+              <p className="text-sm text-slate-500">{item.servicioSolicitado}</p>
             </div>
             <div className="text-right">
               <p className="text-sm font-medium text-slate-900">{formatDateTime(item.fechaHora)}</p>

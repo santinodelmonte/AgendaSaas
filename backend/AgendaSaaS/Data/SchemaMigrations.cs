@@ -87,6 +87,27 @@ public static class SchemaMigrations
             PRIMARY KEY (Id),
             KEY IX_Servicios_TenantId (TenantId)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS PushSuscripciones (
+            Id CHAR(36) NOT NULL,
+            TenantId CHAR(36) NOT NULL,
+            EndpointHash CHAR(64) NOT NULL,
+            Endpoint TEXT NOT NULL,
+            P256dh VARCHAR(255) NOT NULL,
+            Auth VARCHAR(255) NOT NULL,
+            FechaCreacion DATETIME NOT NULL,
+            PRIMARY KEY (Id),
+            UNIQUE KEY UX_PushSuscripciones_EndpointHash (EndpointHash),
+            KEY IX_PushSuscripciones_TenantId (TenantId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS ConfiguracionSistema (
+            Clave VARCHAR(100) NOT NULL,
+            Valor TEXT NOT NULL,
+            PRIMARY KEY (Clave)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
         """
     ];
 

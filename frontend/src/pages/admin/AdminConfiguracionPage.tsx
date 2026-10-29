@@ -7,6 +7,7 @@ import {
 } from '../../api/admin.service';
 import type { PerfilAdmin, Horario, DiaBloqueado, Servicio } from '../../types/admin';
 import { useToast } from '../../contexts/ToastContext';
+import { NotificacionesCard } from '../../notificaciones/NotificacionesCard';
 
 type Tab = 'perfil' | 'horarios' | 'dias' | 'servicios';
 
@@ -246,6 +247,8 @@ export function AdminConfiguracionPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4">
       <h1 className="text-2xl font-semibold text-slate-900">Configuración</h1>
+
+      <NotificacionesCard />
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-2xl bg-slate-100 p-1">

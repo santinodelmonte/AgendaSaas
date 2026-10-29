@@ -6,6 +6,8 @@ import type { AgendaItem, SemanaDia } from '../../types/admin';
 import { Loading } from '../../components/common/Loading';
 import { formatDayLabel, formatTime, toDateInputValue } from '../../utils/date';
 import { useToast } from '../../contexts/ToastContext';
+import { useAvisoWhatsApp } from '../../contexts/AvisoWhatsAppContext';
+import type { TipoAviso } from '../../utils/whatsapp';
 
 const ESTADO_CFG = {
   Pendiente:  { bg: 'bg-amber-50',  border: 'border-amber-300',  dot: 'bg-amber-500'  },
@@ -23,6 +25,7 @@ function inicioSemana(fecha: Date) {
 
 export function AdminAgendaSemanalPage() {
   const { pushToast } = useToast();
+  const { ofrecerAviso } = useAvisoWhatsApp();
   const [semana, setSemana] = useState<SemanaDia[]>([]);
   const [lunes, setLunes] = useState(() => toDateInputValue(inicioSemana(new Date())));
   const [loading, setLoading] = useState(true);
@@ -43,10 +46,17 @@ export function AdminAgendaSemanalPage() {
     getAgendaSemanal(lunes).then(setSemana);
   }
 
-  async function accion(fn: () => Promise<unknown>, id: string) {
-    setActionId(id);
+  async function accion(fn: () => Promise<unknown>, turno: AgendaItem, aviso: TipoAviso) {
+    setActionId(turno.id);
     try {
       await fn();
+      ofrecerAviso({
+        tipo: aviso,
+        nombreCliente: turno.nombreCliente,
+        telefonoCliente: turno.telefonoCliente,
+        fechaHora: turno.fechaHora,
+        servicio: turno.servicioSolicitado,
+      });
       refresh();
     } catch {
       pushToast({ type: 'error', message: 'No se pudo realizar la acción.' });
@@ -97,9 +107,9 @@ export function AdminAgendaSemanalPage() {
                       key={turno.id}
                       turno={turno}
                       loading={actionId === turno.id}
-                      onConfirmar={() => accion(() => confirmarTurno(turno.id), turno.id)}
-                      onRechazar={() => accion(() => rechazarTurno(turno.id), turno.id)}
-                      onCancelar={() => accion(() => cancelarTurno(turno.id), turno.id)}
+                      onConfirmar={() => accion(() => confirmarTurno(turno.id), turno, 'confirmado')}
+                      onRechazar={() => accion(() => rechazarTurno(turno.id), turno, 'rechazado')}
+                      onCancelar={() => accion(() => cancelarTurno(turno.id), turno, 'cancelado')}
                     />
                   ))}
                 </div>
@@ -135,7 +145,7 @@ function TurnoCard({
         <span className="ml-auto text-xs text-slate-500">{turno.estado}</span>
       </div>
       <p className="text-sm font-semibold text-slate-900">{turno.nombreCliente ?? '-'}</p>
-      {turno.servicio && <p className="text-xs text-slate-500">{turno.servicio}</p>}
+      {turno.servicioSolicitado && <p className="text-xs text-slate-500">{turno.servicioSolicitado}</p>}
 
       {!loading && turno.estado === 'Pendiente' && (
         <div className="mt-2 flex gap-1.5">

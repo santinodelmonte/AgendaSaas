@@ -10,6 +10,8 @@ import {
 import type { TurnoAgenda } from '../../types/admin';
 import { formatDayLabel } from '../../utils/date';
 import { ModalBase } from './ModalBase';
+import { useAvisoWhatsApp } from '../../contexts/AvisoWhatsAppContext';
+import type { TipoAviso } from '../../utils/whatsapp';
 import { StepperTiempo } from './StepperTiempo';
 import {
   aFechaHoraISO,
@@ -49,14 +51,24 @@ export function ModalDetalleTurno({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const { ofrecerAviso } = useAvisoWhatsApp();
   const cfg = estadoTurnoCfg(turno.estado);
   const hayCambios = hora !== horaOriginal || duracion !== duracionOriginal;
 
-  async function ejecutar(fn: () => Promise<unknown>, fallback: string) {
+  async function ejecutar(fn: () => Promise<unknown>, fallback: string, aviso?: TipoAviso) {
     setSaving(true);
     setError(null);
     try {
       await fn();
+      if (aviso) {
+        ofrecerAviso({
+          tipo: aviso,
+          nombreCliente: turno.nombreCliente,
+          telefonoCliente: turno.telefonoCliente,
+          fechaHora: turno.fechaHora,
+          servicio: turno.servicioSolicitado,
+        });
+      }
       onChanged();
     } catch (err) {
       setError(mensajeApi(err, fallback));
@@ -74,6 +86,7 @@ export function ModalDetalleTurno({
     ejecutar(
       () => (turno.estado === 'Pendiente' ? rechazarTurno(turno.id) : cancelarTurno(turno.id)),
       'No se pudo eliminar el turno.',
+      turno.estado === 'Pendiente' ? 'rechazado' : 'cancelado',
     );
 
   const intercambiar = () => {
@@ -227,7 +240,7 @@ export function ModalDetalleTurno({
           <div className="flex gap-2.5">
             <button
               type="button"
-              onClick={() => ejecutar(() => confirmarTurno(turno.id), 'No se pudo confirmar el turno.')}
+              onClick={() => ejecutar(() => confirmarTurno(turno.id), 'No se pudo confirmar el turno.', 'confirmado')}
               disabled={saving}
               className="h-12 flex-1 rounded-2xl bg-green-600 text-sm font-semibold text-white transition hover:bg-green-700 disabled:opacity-50"
             >
@@ -235,7 +248,7 @@ export function ModalDetalleTurno({
             </button>
             <button
               type="button"
-              onClick={() => ejecutar(() => rechazarTurno(turno.id), 'No se pudo rechazar el turno.')}
+              onClick={() => ejecutar(() => rechazarTurno(turno.id), 'No se pudo rechazar el turno.', 'rechazado')}
               disabled={saving}
               className="h-12 flex-1 rounded-2xl bg-red-500 text-sm font-semibold text-white transition hover:bg-red-600 disabled:opacity-50"
             >

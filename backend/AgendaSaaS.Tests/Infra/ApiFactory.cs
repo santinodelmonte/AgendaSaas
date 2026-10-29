@@ -1,4 +1,5 @@
 using AgendaSaaS.Services;
+using AgendaSaaS.Services.Notificaciones;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -25,6 +26,8 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public FakeClock Clock { get; } = new();
 
+    public FakePushSender Push { get; } = new();
+
     protected virtual int LoginPorMinuto => 10_000;
 
     public string ConnectionString =>
@@ -45,6 +48,8 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         {
             services.RemoveAll<IClock>();
             services.AddSingleton<IClock>(Clock);
+            services.RemoveAll<IPushSender>();
+            services.AddSingleton<IPushSender>(Push);
         });
     }
 

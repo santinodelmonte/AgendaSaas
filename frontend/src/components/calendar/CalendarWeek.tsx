@@ -24,7 +24,7 @@ export function CalendarWeek({ items }: Props) {
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <p className="font-semibold text-slate-900">{item.nombreCliente}</p>
-                    <p className="text-sm text-slate-500">{item.servicio}</p>
+                    <p className="text-sm text-slate-500">{item.servicioSolicitado}</p>
                   </div>
                   <span className="text-sm font-medium text-slate-700">{formatDateTime(item.fechaHora)}</span>
                 </div>

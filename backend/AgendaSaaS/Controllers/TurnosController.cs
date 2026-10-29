@@ -3,6 +3,7 @@ using AgendaSaaS.Entities;
 using AgendaSaaS.Repositories;
 using AgendaSaaS.Security;
 using AgendaSaaS.Services;
+using AgendaSaaS.Services.Notificaciones;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -22,6 +23,7 @@ public class TurnosController : ControllerBase
     private readonly IDiasBloqueadosRepository _diasBloqueadosRepository;
     private readonly IClock _clock;
     private readonly TenantLocks _locks;
+    private readonly Notificador _notificador;
 
     public TurnosController(
         ITenantProvider tenantProvider,
@@ -30,7 +32,8 @@ public class TurnosController : ControllerBase
         IManicuristaRepository manicuristaRepository,
         IDiasBloqueadosRepository diasBloqueadosRepository,
         IClock clock,
-        TenantLocks locks)
+        TenantLocks locks,
+        Notificador notificador)
     {
         _tenantProvider = tenantProvider;
         _turnoRepository = turnoRepository;
@@ -39,6 +42,7 @@ public class TurnosController : ControllerBase
         _diasBloqueadosRepository = diasBloqueadosRepository;
         _clock = clock;
         _locks = locks;
+        _notificador = notificador;
     }
 
     [AllowAnonymous]
@@ -249,6 +253,8 @@ public class TurnosController : ControllerBase
             await _turnoRepository
                 .ActualizarAsync(turno);
 
+            _notificador.AvisarNuevaReserva(turno);
+
             return Ok();
         }
 
@@ -268,6 +274,8 @@ public class TurnosController : ControllerBase
 
         await _turnoRepository
             .CrearAsync(nuevoTurno);
+
+        _notificador.AvisarNuevaReserva(nuevoTurno);
 
         return Ok();
     }

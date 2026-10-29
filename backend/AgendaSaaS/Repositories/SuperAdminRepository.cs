@@ -235,6 +235,7 @@ public class SuperAdminRepository : ISuperAdminRepository
             {
                 "Turnos",
                 "DiasBloqueados",
+                "PushSuscripciones",
                 "Servicios",
                 "BloqueHorarioConfig",
                 "Usuarios",

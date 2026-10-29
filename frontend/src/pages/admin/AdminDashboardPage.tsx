@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useToast } from '../../contexts/ToastContext';
+import { useAvisoWhatsApp } from '../../contexts/AvisoWhatsAppContext';
+import type { TipoAviso } from '../../utils/whatsapp';
 import {
   CalendarClock, CalendarCheck2, CalendarDays, Sparkles,
   ChevronLeft, ChevronRight, Plus, Copy, Check,
@@ -28,6 +30,7 @@ import { ModalCrearTurno } from '../../components/schedule/ModalCrearTurno';
 import { StepperTiempo } from '../../components/schedule/StepperTiempo';
 import { computarLayoutDia, mensajeApi } from '../../components/schedule/timeline';
 import { formatDateTime, formatDayLabel, formatTime, toDateInputValue } from '../../utils/date';
+import { NotificacionesCard } from '../../notificaciones/NotificacionesCard';
 
 const ESTADO_CONFIG = {
   Disponible: { bg: 'bg-green-50', border: 'border-green-300', dot: 'bg-green-500', label: 'Libre' },
@@ -60,6 +63,7 @@ export function AdminDashboardPage() {
   const [crearHora, setCrearHora] = useState<number | null | undefined>(undefined);
   const [copiado, setCopiado] = useState(false);
   const { pushToast } = useToast();
+  const { ofrecerAviso } = useAvisoWhatsApp();
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -156,10 +160,22 @@ export function AdminDashboardPage() {
     }
   }
 
+  function avisar(tipo: TipoAviso) {
+    if (!selected) return;
+    ofrecerAviso({
+      tipo,
+      nombreCliente: selected.nombreCliente,
+      telefonoCliente: selected.telefonoCliente,
+      fechaHora: selected.fechaHora,
+      servicio: selected.servicioSolicitado,
+    });
+  }
+
   async function handleConfirmar() {
     if (!selected?.id) return;
     setSaving(true);
     await confirmarTurno(selected.id);
+    avisar('confirmado');
     cerrarModal();
     refresh();
     setSaving(false);
@@ -169,6 +185,7 @@ export function AdminDashboardPage() {
     if (!selected?.id) return;
     setSaving(true);
     await rechazarTurno(selected.id);
+    avisar('rechazado');
     cerrarModal();
     refresh();
     setSaving(false);
@@ -182,6 +199,7 @@ export function AdminDashboardPage() {
     }
     setSaving(true);
     await cancelarTurno(selected.id);
+    avisar('cancelado');
     cerrarModal();
     refresh();
     setSaving(false);
@@ -250,6 +268,8 @@ export function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      <NotificacionesCard compacto />
 
       {/* Cards de resumen */}
       {loadingDash ? (

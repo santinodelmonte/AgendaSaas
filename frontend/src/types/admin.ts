@@ -5,7 +5,7 @@ export type DashboardStats = {
   proximoTurno?: {
     fechaHora: string;
     nombreCliente: string;
-    servicio: string;
+    servicioSolicitado: string | null;
   } | null;
 };
 
@@ -38,7 +38,7 @@ export type TurnoPendiente = {
   id: string;
   nombreCliente: string;
   telefonoCliente: string;
-  servicio: string;
+  servicioSolicitado: string | null;
   fechaHora: string;
 };
 
@@ -46,7 +46,8 @@ export type AgendaItem = {
   id: string;
   fechaHora: string;
   nombreCliente: string;
-  servicio: string;
+  telefonoCliente: string | null;
+  servicioSolicitado: string | null;
   estado: 'Pendiente' | 'Confirmado' | 'Rechazado' | string;
 };
 
