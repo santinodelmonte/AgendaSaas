@@ -22,7 +22,7 @@ public class ServicioRepository : IServicioRepository
 
         var sql = """
             SELECT Id, TenantId, Nombre, Precio, Activo
-            FROM servicios
+            FROM Servicios
             WHERE TenantId = @TenantId
             ORDER BY Nombre
             """;
@@ -46,7 +46,7 @@ public class ServicioRepository : IServicioRepository
 
         var sql = """
             SELECT Id, TenantId, Nombre, Precio, Activo
-            FROM servicios
+            FROM Servicios
             WHERE TenantId = @TenantId AND Activo = 1
             ORDER BY Nombre
             """;
@@ -69,7 +69,7 @@ public class ServicioRepository : IServicioRepository
         await conn.OpenAsync();
 
         var sql = """
-            INSERT INTO servicios (Id, TenantId, Nombre, Precio, Activo)
+            INSERT INTO Servicios (Id, TenantId, Nombre, Precio, Activo)
             VALUES (@Id, @TenantId, @Nombre, @Precio, @Activo)
             """;
 
@@ -91,7 +91,7 @@ public class ServicioRepository : IServicioRepository
         await conn.OpenAsync();
 
         var sql = """
-            UPDATE servicios
+            UPDATE Servicios
             SET Nombre = @Nombre, Precio = @Precio, Activo = @Activo
             WHERE Id = @Id AND TenantId = @TenantId
             """;
@@ -113,7 +113,7 @@ public class ServicioRepository : IServicioRepository
         using var conn = _factory.CreateConnection();
         await conn.OpenAsync();
 
-        var sql = "DELETE FROM servicios WHERE Id = @Id AND TenantId = @TenantId";
+        var sql = "DELETE FROM Servicios WHERE Id = @Id AND TenantId = @TenantId";
 
         using var cmd = new MySqlCommand(sql, conn);
         cmd.Parameters.AddWithValue("@Id", id.ToString());

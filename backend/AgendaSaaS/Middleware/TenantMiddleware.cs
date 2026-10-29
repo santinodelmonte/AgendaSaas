@@ -1,3 +1,5 @@
+using AgendaSaaS.Entities;
+using AgendaSaaS.Repositories;
 using AgendaSaaS.Services;
 
 namespace AgendaSaaS.Middleware;
@@ -14,14 +16,17 @@ public class TenantMiddleware
 
     public async Task InvokeAsync(
         HttpContext context,
-        ITenantProvider tenantProvider)
+        ITenantProvider tenantProvider,
+        IManicuristaRepository manicuristaRepository)
     {
         var path = context.Request.Path;
 
         // Endpoints no scopeados a un tenant.
         // /api/superadmin opera sobre todas las manicuristas y se protege por rol.
         // /api/public resuelve el tenant por slug.
-        if (path.StartsWithSegments("/api/auth") ||
+        // Lo que no es /api (ej. /health) no tiene tenant.
+        if (!path.StartsWithSegments("/api") ||
+            path.StartsWithSegments("/api/auth") ||
             path.StartsWithSegments("/api/public") ||
             path.StartsWithSegments("/api/superadmin"))
         {
@@ -46,7 +51,33 @@ public class TenantMiddleware
                 return;
             }
 
+            // El JWT sigue siendo válido hasta que expira: si el superadmin desactivó
+            // (o borró) a la manicurista, se corta el acceso en el próximo request.
+            if (context.User.IsInRole(nameof(UsuarioRol.Manicurista)))
+            {
+                var manicurista =
+                    await manicuristaRepository.ObtenerPorTenantAsync(tenantIdClaim);
+
+                if (manicurista is null || !manicurista.Activo)
+                {
+                    context.Response.StatusCode = 401;
+                    await context.Response.WriteAsJsonAsync(new
+                    {
+                        error = "La cuenta está desactivada."
+                    });
+                    return;
+                }
+            }
+
             tenantProvider.TenantId = tenantIdClaim;
+            await _next(context);
+            return;
+        }
+
+        // Request anónimo (o con token vencido) a un endpoint protegido: se deja
+        // seguir para que la autorización responda 401 y el frontend mande al login.
+        if (!path.StartsWithSegments("/api/turnos"))
+        {
             await _next(context);
             return;
         }

@@ -11,13 +11,16 @@ public class AdminDiasBloqueadosController : ControllerBase
 {
     private readonly ITenantProvider _tenantProvider;
     private readonly IDiasBloqueadosRepository _repository;
+    private readonly IClock _clock;
 
     public AdminDiasBloqueadosController(
         ITenantProvider tenantProvider,
-        IDiasBloqueadosRepository repository)
+        IDiasBloqueadosRepository repository,
+        IClock clock)
     {
         _tenantProvider = tenantProvider;
         _repository = repository;
+        _clock = clock;
     }
 
     [HttpGet]
@@ -35,8 +38,11 @@ public class AdminDiasBloqueadosController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Bloquear([FromBody] BloquearDiaRequest request)
     {
-        if (request.Fecha < DateTime.Today)
+        if (request.Fecha.Date < _clock.Today)
             return BadRequest("No podés bloquear fechas pasadas.");
+
+        if (request.Motivo?.Length > 200)
+            return BadRequest("El motivo no puede superar los 200 caracteres.");
 
         var existente = await _repository.ObtenerPorFechaAsync(
             _tenantProvider.TenantId,
@@ -50,7 +56,7 @@ public class AdminDiasBloqueadosController : ControllerBase
             Id = Guid.NewGuid(),
             TenantId = _tenantProvider.TenantId,
             Fecha = request.Fecha.Date,
-            Motivo = request.Motivo
+            Motivo = string.IsNullOrWhiteSpace(request.Motivo) ? null : request.Motivo.Trim()
         };
 
         await _repository.CrearAsync(dia);
@@ -60,7 +66,11 @@ public class AdminDiasBloqueadosController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> Desbloquear(Guid id)
     {
-        await _repository.EliminarAsync(id);
+        var eliminado = await _repository.EliminarAsync(id, _tenantProvider.TenantId);
+
+        if (!eliminado)
+            return NotFound();
+
         return Ok();
     }
 }

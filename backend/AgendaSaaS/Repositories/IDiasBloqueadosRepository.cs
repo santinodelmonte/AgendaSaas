@@ -10,5 +10,5 @@ public interface IDiasBloqueadosRepository
 
     Task CrearAsync(DiasBloqueado dia);
 
-    Task EliminarAsync(Guid id);
+    Task<bool> EliminarAsync(Guid id, Guid tenantId);
 }

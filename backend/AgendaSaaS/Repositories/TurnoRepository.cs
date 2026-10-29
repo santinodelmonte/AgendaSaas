@@ -464,7 +464,8 @@ public class TurnoRepository : ITurnoRepository
     public async Task<List<Turno>> ObtenerHistorialAsync(
         Guid tenantId,
         int pagina,
-        int tamano)
+        int tamano,
+        DateTime hasta)
     {
         var resultado = new List<Turno>();
 
@@ -481,13 +482,14 @@ public class TurnoRepository : ITurnoRepository
         FROM Turnos
         WHERE TenantId = @TenantId
           AND Estado != 0
-          AND FechaHora < NOW()
+          AND FechaHora < @Hasta
         ORDER BY FechaHora DESC
         LIMIT @Tamano OFFSET @Offset
         """;
 
         using var command = new MySqlCommand(sql, connection);
         command.Parameters.AddWithValue("@TenantId", tenantId.ToString());
+        command.Parameters.AddWithValue("@Hasta", hasta);
         command.Parameters.AddWithValue("@Tamano", tamano);
         command.Parameters.AddWithValue("@Offset", offset);
 

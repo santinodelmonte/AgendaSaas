@@ -42,5 +42,6 @@ public interface ITurnoRepository
     Task<List<Turno>> ObtenerHistorialAsync(
         Guid tenantId,
         int pagina,
-        int tamano);
+        int tamano,
+        DateTime hasta);
 }

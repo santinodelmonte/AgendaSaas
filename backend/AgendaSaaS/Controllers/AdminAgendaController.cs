@@ -14,19 +14,22 @@ public class AdminAgendaController : ControllerBase
     private readonly IBloqueRepository _bloqueRepository;
     private readonly IManicuristaRepository _manicuristaRepository;
     private readonly IDiasBloqueadosRepository _diasBloqueadosRepository;
+    private readonly IClock _clock;
 
     public AdminAgendaController(
         ITenantProvider tenantProvider,
         ITurnoRepository turnoRepository,
         IBloqueRepository bloqueRepository,
         IManicuristaRepository manicuristaRepository,
-        IDiasBloqueadosRepository diasBloqueadosRepository)
+        IDiasBloqueadosRepository diasBloqueadosRepository,
+        IClock clock)
     {
         _tenantProvider = tenantProvider;
         _turnoRepository = turnoRepository;
         _bloqueRepository = bloqueRepository;
         _manicuristaRepository = manicuristaRepository;
         _diasBloqueadosRepository = diasBloqueadosRepository;
+        _clock = clock;
     }
 
     [HttpGet]
@@ -66,8 +69,11 @@ public class AdminAgendaController : ControllerBase
     {
         var tenantId = _tenantProvider.TenantId;
 
+        pagina = Math.Max(pagina, 1);
+        tamano = Math.Clamp(tamano, 1, 100);
+
         var turnos = await _turnoRepository
-            .ObtenerHistorialAsync(tenantId, pagina, tamano);
+            .ObtenerHistorialAsync(tenantId, pagina, tamano, _clock.Now);
 
         var resultado = turnos.Select(t => new
         {

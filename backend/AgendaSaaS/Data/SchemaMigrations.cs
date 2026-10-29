@@ -4,10 +4,96 @@ namespace AgendaSaaS.Data;
 
 public static class SchemaMigrations
 {
+    // Esquema base. Los nombres de tabla respetan mayúsculas: en MySQL sobre Linux
+    // (lower_case_table_names=0) "Servicios" y "servicios" son tablas distintas.
+    private static readonly string[] CrearTablas =
+    [
+        """
+        CREATE TABLE IF NOT EXISTS Manicuristas (
+            Id CHAR(36) NOT NULL,
+            TenantId CHAR(36) NOT NULL,
+            Nombre VARCHAR(200) NOT NULL,
+            Slug VARCHAR(200) NOT NULL,
+            Email VARCHAR(255) NOT NULL,
+            WhatsApp VARCHAR(50) NOT NULL,
+            Activo TINYINT(1) NOT NULL DEFAULT 1,
+            DuracionTurnoMinutos INT NOT NULL DEFAULT 30,
+            PRIMARY KEY (Id),
+            UNIQUE KEY UX_Manicuristas_TenantId (TenantId),
+            UNIQUE KEY UX_Manicuristas_Slug (Slug)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS Usuarios (
+            Id CHAR(36) NOT NULL,
+            TenantId CHAR(36) NOT NULL,
+            Email VARCHAR(255) NOT NULL,
+            PasswordHash VARCHAR(255) NOT NULL,
+            Activo TINYINT(1) NOT NULL DEFAULT 1,
+            Rol INT NOT NULL DEFAULT 0,
+            PRIMARY KEY (Id),
+            UNIQUE KEY UX_Usuarios_Email (Email),
+            KEY IX_Usuarios_TenantId (TenantId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS BloqueHorarioConfig (
+            Id CHAR(36) NOT NULL,
+            TenantId CHAR(36) NOT NULL,
+            DiaSemana INT NOT NULL,
+            HoraInicio TIME NOT NULL,
+            HoraFin TIME NOT NULL,
+            PausaInicio TIME NULL,
+            PausaFin TIME NULL,
+            PRIMARY KEY (Id),
+            KEY IX_BloqueHorarioConfig_TenantId (TenantId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS Turnos (
+            Id CHAR(36) NOT NULL,
+            TenantId CHAR(36) NOT NULL,
+            FechaHora DATETIME NOT NULL,
+            NombreCliente VARCHAR(100) NULL,
+            TelefonoCliente VARCHAR(20) NULL,
+            ServicioSolicitado VARCHAR(200) NULL,
+            NotaInterna VARCHAR(500) NULL,
+            Estado INT NOT NULL DEFAULT 0,
+            FechaCreacionPendiente DATETIME NULL,
+            Version BIGINT NOT NULL DEFAULT 1,
+            DuracionMinutos INT NULL,
+            PRIMARY KEY (Id),
+            KEY IX_Turnos_TenantId_FechaHora (TenantId, FechaHora),
+            KEY IX_Turnos_Estado_FechaCreacionPendiente (Estado, FechaCreacionPendiente)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS DiasBloqueados (
+            Id CHAR(36) NOT NULL,
+            TenantId CHAR(36) NOT NULL,
+            Fecha DATE NOT NULL,
+            Motivo VARCHAR(200) NULL,
+            PRIMARY KEY (Id),
+            UNIQUE KEY UX_DiasBloqueados_TenantId_Fecha (TenantId, Fecha)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """,
+        """
+        CREATE TABLE IF NOT EXISTS Servicios (
+            Id CHAR(36) NOT NULL,
+            TenantId CHAR(36) NOT NULL,
+            Nombre VARCHAR(200) NOT NULL,
+            Precio DECIMAL(10,2) NOT NULL DEFAULT 0,
+            Activo TINYINT(1) NOT NULL DEFAULT 1,
+            PRIMARY KEY (Id),
+            KEY IX_Servicios_TenantId (TenantId)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        """
+    ];
+
     /// <summary>
-    /// El proyecto no usa un sistema de migraciones: el esquema se mantiene a mano.
-    /// Este chequeo idempotente agrega la columna Turnos.DuracionMinutos si falta,
-    /// para que la app no dependa de correr el ALTER manualmente.
+    /// El proyecto no usa un sistema de migraciones: el esquema se aplica al arrancar
+    /// de forma idempotente. Crea las tablas que falten (una base vacía queda lista
+    /// para usar) y aplica los cambios incrementales sobre bases existentes.
     /// </summary>
     public static async Task AplicarAsync(
         SqlConnectionFactory factory)
@@ -16,6 +102,14 @@ public static class SchemaMigrations
             factory.CreateConnection();
 
         await connection.OpenAsync();
+
+        foreach (var sql in CrearTablas)
+        {
+            using var create =
+                new MySqlCommand(sql, connection);
+
+            await create.ExecuteNonQueryAsync();
+        }
 
         await AgregarColumnaSiFaltaAsync(
             connection, "Turnos", "DuracionMinutos",

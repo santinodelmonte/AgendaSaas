@@ -154,7 +154,7 @@ public class AdminHorariosController : ControllerBase
             return "PausaInicio y PausaFin deben informarse juntas.";
         }
 
-        if (pausaInicioTieneValor && pausaFinTieneValor)
+        if (pausaInicio.HasValue && pausaFin.HasValue)
         {
             if (pausaInicio.Value >= pausaFin.Value)
             {

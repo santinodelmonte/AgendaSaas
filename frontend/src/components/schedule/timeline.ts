@@ -1,4 +1,5 @@
 import { parseISO } from 'date-fns';
+import { mensajeDeError } from '../../api/errors';
 import type { AgendaSlot, TurnoAgenda } from '../../types/admin';
 
 // Escala vertical del timeline: 30 min = 60px, así un turno estándar
@@ -28,10 +29,9 @@ export function minutosAhora() {
   return d.getHours() * 60 + d.getMinutes();
 }
 
-// La API devuelve los BadRequest como string plano en el body.
 export function mensajeApi(err: unknown, fallback: string) {
   const data = (err as { response?: { data?: unknown } })?.response?.data;
-  return typeof data === 'string' && data.length > 0 ? data : fallback;
+  return mensajeDeError(data) ?? fallback;
 }
 
 export function formatMin(min: number) {

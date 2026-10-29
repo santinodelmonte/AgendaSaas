@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { authStorage } from '../utils/storage';
+import { mensajeDeError } from './errors';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '',
@@ -24,8 +25,18 @@ api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     const status = error.response?.status;
+    const esLogin = error.config?.url?.includes('/api/auth/login') ?? false;
 
-    if (status === 401 || status === 403) {
+    if (esLogin && status === 401) {
+      window.dispatchEvent(
+        new CustomEvent('app:toast', {
+          detail: { type: 'error', message: 'Email o contraseña incorrectos.' },
+        }),
+      );
+      return Promise.reject(error);
+    }
+
+    if (!esLogin && (status === 401 || status === 403)) {
       authStorage.clear();
       window.dispatchEvent(
         new CustomEvent('auth:expired', {
@@ -38,9 +49,8 @@ api.interceptors.response.use(
     }
 
     const message =
-      (error.response?.data as { message?: string } | undefined)?.message ??
-      error.message ??
-      'Ocurrió un error inesperado.';
+      mensajeDeError(error.response?.data) ??
+      (error.response ? 'Ocurrió un error inesperado.' : 'No se pudo conectar con el servidor.');
 
     window.dispatchEvent(
       new CustomEvent('app:toast', {

@@ -28,6 +28,9 @@ public class JwtService : IJwtService
         var audience =
             _configuration["Jwt:Audience"]!;
 
+        var expiraMinutos =
+            _configuration.GetValue("Jwt:ExpiresMinutes", 480);
+
         var securityKey =
             new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(key));
@@ -63,7 +66,7 @@ public class JwtService : IJwtService
                 audience,
                 claims,
                 expires:
-                    DateTime.UtcNow.AddDays(7),
+                    DateTime.UtcNow.AddMinutes(expiraMinutos),
                 signingCredentials:
                     credentials);
 

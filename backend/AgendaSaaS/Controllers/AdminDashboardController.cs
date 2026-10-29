@@ -10,20 +10,23 @@ public class AdminDashboardController : ControllerBase
 {
     private readonly ITenantProvider _tenantProvider;
     private readonly ITurnoRepository _turnoRepository;
+    private readonly IClock _clock;
 
     public AdminDashboardController(
         ITenantProvider tenantProvider,
-        ITurnoRepository turnoRepository)
+        ITurnoRepository turnoRepository,
+        IClock clock)
     {
         _tenantProvider = tenantProvider;
         _turnoRepository = turnoRepository;
+        _clock = clock;
     }
 
     [HttpGet]
     public async Task<IActionResult> Obtener()
     {
         var tenantId = _tenantProvider.TenantId;
-        var ahora = DateTime.Now;
+        var ahora = _clock.Now;
 
         var inicioHoy = ahora.Date;
         var finHoy = inicioHoy.AddDays(1);

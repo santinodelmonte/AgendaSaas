@@ -11,19 +11,23 @@ public class AdminMetricasController : ControllerBase
 {
     private readonly ITenantProvider _tenantProvider;
     private readonly SqlConnectionFactory _factory;
+    private readonly IClock _clock;
 
     public AdminMetricasController(
         ITenantProvider tenantProvider,
-        SqlConnectionFactory factory)
+        SqlConnectionFactory factory,
+        IClock clock)
     {
         _tenantProvider = tenantProvider;
         _factory = factory;
+        _clock = clock;
     }
 
     [HttpGet]
     public async Task<IActionResult> Obtener()
     {
         var tenantId = _tenantProvider.TenantId.ToString();
+        var ahora = _clock.Now;
 
         using var connection = _factory.CreateConnection();
         await connection.OpenAsync();
@@ -35,11 +39,11 @@ public class AdminMetricasController : ControllerBase
         SELECT
             DATE_FORMAT(FechaHora, '%Y-%m') AS Mes,
             COUNT(*) AS Total,
-            SUM(CASE WHEN Estado = 2 THEN 1 ELSE 0 END) AS Confirmados
+            COALESCE(SUM(CASE WHEN Estado = 2 THEN 1 ELSE 0 END), 0) AS Confirmados
         FROM Turnos
         WHERE TenantId = @TenantId
           AND Estado != 0
-          AND FechaHora >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+          AND FechaHora >= @Desde
         GROUP BY DATE_FORMAT(FechaHora, '%Y-%m')
         ORDER BY Mes
         """;
@@ -47,6 +51,7 @@ public class AdminMetricasController : ControllerBase
         using (var cmd = new MySqlCommand(sqlMes, connection))
         {
             cmd.Parameters.AddWithValue("@TenantId", tenantId);
+            cmd.Parameters.AddWithValue("@Desde", ahora.AddMonths(-6));
             using var reader = await cmd.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
@@ -65,17 +70,18 @@ public class AdminMetricasController : ControllerBase
         """
         SELECT
             COUNT(*) AS Total,
-            SUM(CASE WHEN Estado = 2 THEN 1 ELSE 0 END) AS Confirmados,
-            SUM(CASE WHEN Estado = 3 THEN 1 ELSE 0 END) AS Rechazados
+            COALESCE(SUM(CASE WHEN Estado = 2 THEN 1 ELSE 0 END), 0) AS Confirmados,
+            COALESCE(SUM(CASE WHEN Estado = 3 THEN 1 ELSE 0 END), 0) AS Rechazados
         FROM Turnos
         WHERE TenantId = @TenantId
           AND Estado != 0
-          AND FechaHora < NOW()
+          AND FechaHora < @Ahora
         """;
 
         using (var cmd = new MySqlCommand(sqlTasa, connection))
         {
             cmd.Parameters.AddWithValue("@TenantId", tenantId);
+            cmd.Parameters.AddWithValue("@Ahora", ahora);
             using var reader = await cmd.ExecuteReaderAsync();
             if (await reader.ReadAsync())
             {

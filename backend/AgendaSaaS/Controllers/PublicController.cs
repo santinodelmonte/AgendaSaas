@@ -25,7 +25,7 @@ public class PublicController : ControllerBase
     {
         var manicurista = await _manicuristas.ObtenerPorSlugAsync(slug);
 
-        if (manicurista is null)
+        if (manicurista is null || !manicurista.Activo)
             return NotFound();
 
         return Ok(new
@@ -43,7 +43,7 @@ public class PublicController : ControllerBase
     {
         var manicurista = await _manicuristas.ObtenerPorSlugAsync(slug);
 
-        if (manicurista is null)
+        if (manicurista is null || !manicurista.Activo)
             return NotFound();
 
         var servicios = await _servicios.ObtenerActivosPorTenantAsync(manicurista.TenantId);

@@ -1,9 +1,11 @@
 using AgendaSaaS.Data;
 using AgendaSaaS.Middleware;
 using AgendaSaaS.Repositories;
+using AgendaSaaS.Security;
 using AgendaSaaS.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
@@ -43,27 +45,48 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 //
-// CORS
+// CORS: orígenes permitidos separados por coma (Cors:AllowedOrigins / Cors__AllowedOrigins).
+// En producción tiene que ser la URL pública del frontend.
 //
+var corsOrigins =
+    (builder.Configuration["Cors:AllowedOrigins"] ?? string.Empty)
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AgendaSaaS", policy =>
     {
         policy
-            .WithOrigins(
-                "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175",
-                "http://127.0.0.1:5173",
-                "http://127.0.0.1:5174",
-                "http://127.0.0.1:5175"
-            )
+            .WithOrigins(corsOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
 
+//
+// Detrás de un reverse proxy (nginx, Render, Railway, etc.) la IP real del cliente
+// y el esquema llegan en X-Forwarded-*. Hace falta para que el rate limiting sea
+// por IP de clienta y no por la IP del proxy.
+//
+var detrasDeProxy =
+    builder.Configuration.GetValue("ReverseProxy:Enabled", false);
+
+if (detrasDeProxy)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders =
+            ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownNetworks.Clear();
+        options.KnownProxies.Clear();
+    });
+}
+
+builder.Services.AddAgendaRateLimiting(builder.Configuration);
+
 builder.Services.AddSingleton<SqlConnectionFactory>();
+builder.Services.AddSingleton<IClock, AgendaClock>();
+builder.Services.AddSingleton<TenantLocks>();
 
 builder.Services.AddScoped<ITenantProvider, TenantProvider>();
 
@@ -83,9 +106,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         var key =
-            builder.Configuration["Jwt:Key"]
-            ?? throw new InvalidOperationException(
-                "Jwt:Key no configurada.");
+            builder.Configuration["Jwt:Key"];
+
+        // HMAC-SHA256 necesita una clave de al menos 256 bits: con una más corta el
+        // login falla recién al generar el token.
+        if (string.IsNullOrWhiteSpace(key) || Encoding.UTF8.GetByteCount(key) < 32)
+            throw new InvalidOperationException(
+                "Jwt:Key no configurada o demasiado corta (mínimo 32 caracteres).");
 
         var issuer =
             builder.Configuration["Jwt:Issuer"]
@@ -138,15 +165,39 @@ using (var scope = app.Services.CreateScope())
             .CreateLogger("SuperAdminSeeder"));
 }
 
-app.UseSwagger();
-app.UseSwaggerUI();
+if (detrasDeProxy)
+    app.UseForwardedHeaders();
+
+// Cualquier excepción no controlada se loguea y devuelve un JSON genérico, sin
+// exponer detalles internos.
+app.UseExceptionHandler(errorApp =>
+{
+    errorApp.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            error = "Ocurrió un error inesperado. Probá de nuevo en unos minutos."
+        });
+    });
+});
+
+if (app.Environment.IsDevelopment() ||
+    app.Configuration.GetValue("Swagger:Enabled", false))
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 //
 // CORS debe ejecutarse antes de Authentication y de HttpsRedirection
 //
 app.UseCors("AgendaSaaS");
 
-app.UseHttpsRedirection();
+if (!detrasDeProxy)
+    app.UseHttpsRedirection();
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 
@@ -156,4 +207,24 @@ app.UseAuthorization();
 
 app.MapControllers();
 
+// Para el health check del hosting: responde 200 solo si la base está accesible.
+app.MapGet("/health", async (SqlConnectionFactory factory) =>
+{
+    try
+    {
+        using var connection = factory.CreateConnection();
+        await connection.OpenAsync();
+        return Results.Ok(new { status = "ok" });
+    }
+    catch
+    {
+        return Results.Json(
+            new { status = "db-unavailable" },
+            statusCode: StatusCodes.Status503ServiceUnavailable);
+    }
+}).AllowAnonymous();
+
 app.Run();
+
+// Expuesto para los tests de integración (WebApplicationFactory<Program>).
+public partial class Program;

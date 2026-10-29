@@ -1,9 +1,11 @@
 ﻿using AgendaSaaS.DTOs;
 using AgendaSaaS.Entities;
 using AgendaSaaS.Repositories;
+using AgendaSaaS.Security;
 using AgendaSaaS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AgendaSaaS.Controllers;
 
@@ -11,24 +13,32 @@ namespace AgendaSaaS.Controllers;
 [Route("api/turnos")]
 public class TurnosController : ControllerBase
 {
+    public static readonly TimeSpan AnticipacionMinima = TimeSpan.FromHours(2);
+
     private readonly ITenantProvider _tenantProvider;
     private readonly ITurnoRepository _turnoRepository;
     private readonly IBloqueRepository _bloqueRepository;
     private readonly IManicuristaRepository _manicuristaRepository;
     private readonly IDiasBloqueadosRepository _diasBloqueadosRepository;
+    private readonly IClock _clock;
+    private readonly TenantLocks _locks;
 
     public TurnosController(
         ITenantProvider tenantProvider,
         ITurnoRepository turnoRepository,
         IBloqueRepository bloqueRepository,
         IManicuristaRepository manicuristaRepository,
-        IDiasBloqueadosRepository diasBloqueadosRepository)
+        IDiasBloqueadosRepository diasBloqueadosRepository,
+        IClock clock,
+        TenantLocks locks)
     {
         _tenantProvider = tenantProvider;
         _turnoRepository = turnoRepository;
         _bloqueRepository = bloqueRepository;
         _manicuristaRepository = manicuristaRepository;
         _diasBloqueadosRepository = diasBloqueadosRepository;
+        _clock = clock;
+        _locks = locks;
     }
 
     [AllowAnonymous]
@@ -42,7 +52,7 @@ public class TurnosController : ControllerBase
             await _manicuristaRepository
                 .ObtenerPorTenantAsync(tenantId);
 
-        if (manicurista is null)
+        if (manicurista is null || !manicurista.Activo)
             return NotFound("Manicurista no encontrada.");
 
         var diaBloqueado = await _diasBloqueadosRepository
@@ -74,6 +84,11 @@ public class TurnosController : ControllerBase
         var resultado =
             new List<TurnoDisponibleDto>();
 
+        // Los horarios que ya no se pueden reservar (pasados o dentro de la
+        // anticipación mínima) no se ofrecen.
+        var primerReservable =
+            _clock.Now + AnticipacionMinima;
+
         var actual =
             fecha.Date + bloque.HoraInicio;
 
@@ -90,7 +105,7 @@ public class TurnosController : ControllerBase
                 horaActual >= bloque.PausaInicio.Value &&
                 horaActual < bloque.PausaFin.Value;
 
-            if (!estaEnPausa)
+            if (!estaEnPausa && actual > primerReservable)
             {
                 // Los turnos gestionados desde el admin pueden estar corridos de la
                 // grilla o durar más que un slot: se compara por solapamiento para
@@ -122,6 +137,7 @@ public class TurnosController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimitPolicies.Reservas)]
     [HttpPost("solicitar")]
     public async Task<IActionResult> Solicitar(
         SolicitarTurnoRequest request)
@@ -138,10 +154,12 @@ public class TurnosController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Servicio) || request.Servicio.Length > 200)
             return BadRequest("El servicio debe tener entre 1 y 200 caracteres.");
 
-        if (request.FechaHora <= DateTime.Now)
+        var ahora = _clock.Now;
+
+        if (request.FechaHora <= ahora)
             return BadRequest("No se puede reservar un turno en el pasado.");
 
-        if (request.FechaHora <= DateTime.Now.AddHours(2))
+        if (request.FechaHora <= ahora + AnticipacionMinima)
             return BadRequest("Debés reservar con al menos 2 horas de anticipación.");
 
         var diaBloqueadoSolicitar = await _diasBloqueadosRepository
@@ -154,7 +172,7 @@ public class TurnosController : ControllerBase
             await _manicuristaRepository
                 .ObtenerPorTenantAsync(tenantId);
 
-        if (manicurista is null)
+        if (manicurista is null || !manicurista.Activo)
             return NotFound("Manicurista no encontrada.");
 
         var bloques =
@@ -181,6 +199,10 @@ public class TurnosController : ControllerBase
             return BadRequest(
                 "La hora solicitada no está disponible.");
         }
+
+        // Desde acá hasta el guardado, una sola reserva por tenant a la vez: si no,
+        // dos clientas podrían pasar el chequeo de solapamiento con el mismo horario.
+        using var _ = await _locks.AdquirirAsync(tenantId);
 
         var turnosDia =
             await _turnoRepository

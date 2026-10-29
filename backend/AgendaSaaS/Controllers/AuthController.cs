@@ -1,10 +1,12 @@
 ﻿using AgendaSaaS.DTOs;
 using AgendaSaaS.Entities;
 using AgendaSaaS.Repositories;
+using AgendaSaaS.Security;
 using AgendaSaaS.Services;
 using BCrypt.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AgendaSaaS.Controllers;
 
@@ -28,13 +30,14 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     public async Task<IActionResult> Login(
         LoginRequest request)
     {
         var usuario =
             await _usuarioRepository
                 .ObtenerPorEmailAsync(
-                    request.Email);
+                    request.Email.Trim());
 
         if (usuario is null)
         {
@@ -74,6 +77,14 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> CrearAdmin(
     CrearAdminRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return BadRequest("El email es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 6)
+            return BadRequest("La contraseña debe tener al menos 6 caracteres.");
+
+        request.Email = request.Email.Trim().ToLowerInvariant();
+
         var existente =
             await _usuarioRepository
                 .ObtenerPorEmailAsync(

@@ -9,8 +9,8 @@ export function LoginPage() {
   const { signIn, isAuthenticated, isInitializing, rol } = useAuth();
   const toast = useToast();
 
-  const [email, setEmail] = useState('admin@maria.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   if (isInitializing) return <Loading fullScreen />;
@@ -23,6 +23,8 @@ export function LoginPage() {
       setLoading(true);
       await signIn({ email, password });
       toast.pushToast({ type: 'success', message: 'Sesión iniciada correctamente.' });
+    } catch {
+      // El interceptor de axios ya muestra el error.
     } finally {
       setLoading(false);
     }

@@ -97,16 +97,17 @@ public class DiasBloqueadosRepository : IDiasBloqueadosRepository
         await command.ExecuteNonQueryAsync();
     }
 
-    public async Task EliminarAsync(Guid id)
+    public async Task<bool> EliminarAsync(Guid id, Guid tenantId)
     {
         using var connection = _factory.CreateConnection();
         await connection.OpenAsync();
 
-        var sql = "DELETE FROM DiasBloqueados WHERE Id = @Id";
+        var sql = "DELETE FROM DiasBloqueados WHERE Id = @Id AND TenantId = @TenantId";
 
         using var command = new MySqlCommand(sql, connection);
         command.Parameters.AddWithValue("@Id", id.ToString());
+        command.Parameters.AddWithValue("@TenantId", tenantId.ToString());
 
-        await command.ExecuteNonQueryAsync();
+        return await command.ExecuteNonQueryAsync() > 0;
     }
 }
