@@ -173,6 +173,13 @@ using (var scope = app.Services.CreateScope())
         app.Configuration,
         app.Services.GetRequiredService<ILoggerFactory>()
             .CreateLogger("SuperAdminSeeder"));
+
+    if (app.Configuration.GetValue("Demo:Seed", false))
+    {
+        await DemoSeeder.SembrarAsync(
+            scope.ServiceProvider,
+            app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("DemoSeeder"));
+    }
 }
 
 if (detrasDeProxy)

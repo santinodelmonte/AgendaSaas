@@ -95,6 +95,11 @@ docker compose -f docker-compose.local.yml up --build
 
 ## Correr local (desarrollo)
 
+Al correr con `dotnet run` (perfiles de desarrollo) se cargan datos de demo la primera vez:
+manicurista **`caro@demo.local` / `demo1234`**, con horarios, servicios y turnos alrededor
+de hoy. Agenda pública: `http://localhost:5173/agenda/unas-de-caro`. Se controla con
+`Demo:Seed` (apagado por defecto y en producción).
+
 ```bash
 # Backend
 cd backend/AgendaSaaS
