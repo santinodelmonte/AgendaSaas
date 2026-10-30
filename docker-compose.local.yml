@@ -1,0 +1,50 @@
+# Entorno de prueba en tu computadora: MySQL + API + frontend en http://localhost:8080
+#   docker compose -f docker-compose.local.yml up --build
+# Superadmin: admin@local.test / admin1234   (datos de prueba, NO usar en producción)
+services:
+  mysql:
+    image: mysql:8.0
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--lower-case-table-names=1"]
+    environment:
+      MYSQL_ROOT_PASSWORD: local
+      MYSQL_DATABASE: agendasaas
+      MYSQL_USER: agendasaas
+      MYSQL_PASSWORD: local
+    volumes:
+      - mysql-local:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-plocal"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: ./backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: "Server=mysql;Database=agendasaas;Uid=agendasaas;Pwd=local;Charset=utf8mb4;"
+      Jwt__Key: "clave-local-solo-para-pruebas-0123456789abcdef"
+      SuperAdmin__Email: admin@local.test
+      SuperAdmin__Password: admin1234
+      Cors__AllowedOrigins: http://localhost:8080
+      Swagger__Enabled: "true"
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        # Ruta relativa: la API se llama en el mismo origen, así también funciona
+        # desde el celular en la misma red (http://IP-de-tu-PC:8080).
+        VITE_API_URL: /
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+    volumes:
+      # Igual que producción, pero además reenvía /api a la API (mismo origen).
+      - ./frontend/nginx.local.conf:/etc/nginx/conf.d/default.conf:ro
+
+volumes:
+  mysql-local:

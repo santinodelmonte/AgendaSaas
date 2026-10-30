@@ -4,6 +4,8 @@ import api from '../api/axios';
 export type EstadoPush =
   | 'cargando'
   | 'no-soportado'
+  // Página servida por http (salvo localhost): el navegador no habilita push.
+  | 'requiere-https'
   // iPhone/iPad en Safari: solo funcionan con el panel agregado a la pantalla de inicio.
   | 'ios-instalar'
   | 'bloqueadas'
@@ -11,6 +13,7 @@ export type EstadoPush =
   | 'activas';
 
 type Entorno = {
+  seguro: boolean;
   userAgent: string;
   plataforma: string;
   maxTouchPoints: number;
@@ -26,6 +29,7 @@ export function esIOS(userAgent: string, plataforma: string, maxTouchPoints: num
 
 /** Estado sin contar la suscripción (que requiere consultar al service worker). */
 export function estadoBase(entorno: Entorno): Exclude<EstadoPush, 'cargando' | 'activas'> {
+  if (!entorno.seguro) return 'requiere-https';
   if (esIOS(entorno.userAgent, entorno.plataforma, entorno.maxTouchPoints) && !entorno.standalone) {
     return 'ios-instalar';
   }
@@ -37,6 +41,7 @@ export function estadoBase(entorno: Entorno): Exclude<EstadoPush, 'cargando' | '
 function entornoActual(): Entorno {
   const nav = navigator as Navigator & { standalone?: boolean };
   return {
+    seguro: window.isSecureContext,
     userAgent: nav.userAgent,
     plataforma: nav.platform,
     maxTouchPoints: nav.maxTouchPoints ?? 0,

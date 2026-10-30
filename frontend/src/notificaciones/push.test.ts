@@ -5,7 +5,7 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebK
 const ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36';
 const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15';
 
-const base = { plataforma: 'Linux armv8l', maxTouchPoints: 5, standalone: false, soportaPush: true, permiso: 'default' as const };
+const base = { seguro: true, plataforma: 'Linux armv8l', maxTouchPoints: 5, standalone: false, soportaPush: true, permiso: 'default' as const };
 
 describe('esIOS', () => {
   it('detecta iPhone y iPad (que se presenta como Mac táctil)', () => {
@@ -27,6 +27,10 @@ describe('estadoBase', () => {
 
   it('en Android permite activar directo desde el navegador', () => {
     expect(estadoBase({ ...base, userAgent: ANDROID })).toBe('inactivas');
+  });
+
+  it('sin HTTPS avisa que hace falta, aun en iPhone', () => {
+    expect(estadoBase({ ...base, userAgent: IPHONE, plataforma: 'iPhone', seguro: false })).toBe('requiere-https');
   });
 
   it('informa si el permiso está bloqueado o el navegador no soporta push', () => {

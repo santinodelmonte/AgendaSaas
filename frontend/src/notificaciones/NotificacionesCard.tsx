@@ -72,7 +72,7 @@ export function NotificacionesCard({ compacto = false }: Props) {
   };
 
   if (estado === 'cargando') return null;
-  if (compacto && (oculto || estado === 'activas' || estado === 'no-soportado')) return null;
+  if (compacto && (oculto || estado === 'activas' || estado === 'no-soportado' || estado === 'requiere-https')) return null;
 
   return (
     <section className="relative rounded-3xl border border-slate-200 bg-white p-5 shadow-soft">
@@ -129,6 +129,13 @@ export function NotificacionesCard({ compacto = false }: Props) {
         {estado === 'no-soportado' && (
           <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
             Este navegador no permite notificaciones. Probá desde Chrome en Android, o instalando el panel en tu iPhone.
+          </p>
+        )}
+
+        {estado === 'requiere-https' && (
+          <p className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+            Las notificaciones necesitan una conexión segura (HTTPS). Van a funcionar en el sitio publicado,
+            o en esta computadora entrando por <b>localhost</b>.
           </p>
         )}
 

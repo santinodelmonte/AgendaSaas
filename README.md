@@ -78,7 +78,22 @@ En desarrollo activo.
 - [ ] Recordatorios automáticos por WhatsApp
 - [ ] Reportes de ingresos y clientes recurrentes
 
-## Correr local
+## Probar en tu computadora (un comando)
+
+Con [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado:
+
+```bash
+docker compose -f docker-compose.local.yml up --build
+```
+
+- Abrí **http://localhost:8080** → entrá con `admin@local.test` / `admin1234` (superadmin de prueba).
+- Creá una manicurista, cerrá sesión y entrá con su email para ver el panel.
+- La agenda pública queda en `http://localhost:8080/agenda/<slug>`. Swagger: `http://localhost:8080/swagger`.
+- **Desde el celular** (misma red Wi‑Fi): `http://<IP-de-tu-PC>:8080`. Reservas y panel funcionan;
+  las notificaciones push no, porque requieren HTTPS (en la PC funcionan por `localhost` en Chrome/Edge).
+- Para borrar los datos de prueba: `docker compose -f docker-compose.local.yml down -v`.
+
+## Correr local (desarrollo)
 
 ```bash
 # Backend
