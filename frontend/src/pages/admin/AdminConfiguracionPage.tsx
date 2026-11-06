@@ -7,6 +7,7 @@ import {
 } from '../../api/admin.service';
 import type { PerfilAdmin, Horario, DiaBloqueado, Servicio } from '../../types/admin';
 import { useToast } from '../../contexts/ToastContext';
+import { toDateInputValue } from '../../utils/date';
 
 type Tab = 'perfil' | 'horarios' | 'dias' | 'servicios';
 
@@ -234,7 +235,7 @@ export function AdminConfiguracionPage() {
     }
   }
 
-  const hoy = new Date().toISOString().split('T')[0];
+  const hoy = toDateInputValue(new Date());
 
   const tabs: { key: Tab; label: string }[] = [
     { key: 'perfil', label: 'Perfil' },

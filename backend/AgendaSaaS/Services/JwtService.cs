@@ -28,6 +28,9 @@ public class JwtService : IJwtService
         var audience =
             _configuration["Jwt:Audience"]!;
 
+        var expiresMinutes =
+            _configuration.GetValue("Jwt:ExpiresMinutes", 480);
+
         var securityKey =
             new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes(key));
@@ -54,7 +57,11 @@ public class JwtService : IJwtService
 
                 new Claim(
                     ClaimTypes.Role,
-                    usuario.Rol.ToString())
+                    usuario.Rol.ToString()),
+
+                new Claim(
+                    "tokenVersion",
+                    usuario.TokenVersion.ToString())
             };
 
         var token =
@@ -63,7 +70,7 @@ public class JwtService : IJwtService
                 audience,
                 claims,
                 expires:
-                    DateTime.UtcNow.AddDays(7),
+                    DateTime.UtcNow.AddMinutes(expiresMinutes),
                 signingCredentials:
                     credentials);
 

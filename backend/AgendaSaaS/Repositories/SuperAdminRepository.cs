@@ -215,7 +215,7 @@ public class SuperAdminRepository : ISuperAdminRepository
         await connection.OpenAsync();
 
         using var cmd = new MySqlCommand(
-            "UPDATE Usuarios SET PasswordHash = @Hash WHERE TenantId = @TenantId",
+            "UPDATE Usuarios SET PasswordHash = @Hash, TokenVersion = TokenVersion + 1 WHERE TenantId = @TenantId",
             connection);
         cmd.Parameters.AddWithValue("@Hash", passwordHash);
         cmd.Parameters.AddWithValue("@TenantId", tenantId.ToString());

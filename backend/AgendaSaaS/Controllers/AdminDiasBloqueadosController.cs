@@ -35,7 +35,7 @@ public class AdminDiasBloqueadosController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Bloquear([FromBody] BloquearDiaRequest request)
     {
-        if (request.Fecha < DateTime.Today)
+        if (request.Fecha < HoraLocal.Hoy)
             return BadRequest("No podés bloquear fechas pasadas.");
 
         var existente = await _repository.ObtenerPorFechaAsync(

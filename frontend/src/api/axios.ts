@@ -11,12 +11,14 @@ const api = axios.create({
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const { token } = authStorage.get();
 
-  if (token) {
+  // El tenant de los endpoints autenticados lo deriva el backend del JWT, no del
+  // cliente. La reserva pública (anónima) manda X-Tenant-Id explícito por request
+  // y va SIN token: si una manicurista logueada abre la página de otra, el
+  // backend tomaría el tenant de su token y le mostraría su propia agenda.
+  if (token && !config.headers['X-Tenant-Id']) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  // El tenant de los endpoints autenticados lo deriva el backend del JWT, no del
-  // cliente. La reserva pública (anónima) manda X-Tenant-Id explícito por request.
   return config;
 });
 
@@ -37,8 +39,12 @@ api.interceptors.response.use(
       }
     }
 
+    // El backend responde { message } (errores globales, rate limit) o texto
+    // plano (validaciones con BadRequest("...")).
+    const data = error.response?.data;
     const message =
-      (error.response?.data as { message?: string } | undefined)?.message ??
+      (typeof data === 'string' && data.trim() ? data : undefined) ??
+      (data as { message?: string } | undefined)?.message ??
       error.message ??
       'Ocurrió un error inesperado.';
 

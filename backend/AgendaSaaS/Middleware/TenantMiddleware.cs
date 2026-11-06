@@ -20,8 +20,9 @@ public class TenantMiddleware
 
         // Endpoints no scopeados a un tenant.
         // /api/superadmin opera sobre todas las manicuristas y se protege por rol.
-        // /api/public resuelve el tenant por slug.
-        if (path.StartsWithSegments("/api/auth") ||
+        // /api/public resuelve el tenant por slug. /health es del hosting.
+        if (path.StartsWithSegments("/health") ||
+            path.StartsWithSegments("/api/auth") ||
             path.StartsWithSegments("/api/public") ||
             path.StartsWithSegments("/api/superadmin"))
         {
@@ -48,6 +49,15 @@ public class TenantMiddleware
 
             tenantProvider.TenantId = tenantIdClaim;
             await _next(context);
+            return;
+        }
+
+        // Mandó un token pero no autenticó (vencido, inválido o usuaria
+        // desactivada): es un 401 para que el front la mande al login, no un
+        // request anónimo al que le falta el header de tenant.
+        if (context.Request.Headers.ContainsKey("Authorization"))
+        {
+            context.Response.StatusCode = 401;
             return;
         }
 

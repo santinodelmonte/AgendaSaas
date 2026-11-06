@@ -65,8 +65,8 @@ public class AdminMetricasController : ControllerBase
         """
         SELECT
             COUNT(*) AS Total,
-            SUM(CASE WHEN Estado = 2 THEN 1 ELSE 0 END) AS Confirmados,
-            SUM(CASE WHEN Estado = 3 THEN 1 ELSE 0 END) AS Rechazados
+            COALESCE(SUM(CASE WHEN Estado = 2 THEN 1 ELSE 0 END), 0) AS Confirmados,
+            COALESCE(SUM(CASE WHEN Estado = 3 THEN 1 ELSE 0 END), 0) AS Rechazados
         FROM Turnos
         WHERE TenantId = @TenantId
           AND Estado != 0

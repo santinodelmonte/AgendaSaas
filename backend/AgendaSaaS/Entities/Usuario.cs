@@ -13,4 +13,6 @@ public class Usuario
     public bool Activo { get; set; }
 
     public UsuarioRol Rol { get; set; }
+
+    public int TokenVersion { get; set; }
 }

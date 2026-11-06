@@ -1,9 +1,11 @@
 ﻿using AgendaSaaS.DTOs;
 using AgendaSaaS.Entities;
 using AgendaSaaS.Repositories;
+using AgendaSaaS.Security;
 using AgendaSaaS.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AgendaSaaS.Controllers;
 
@@ -16,19 +18,22 @@ public class TurnosController : ControllerBase
     private readonly IBloqueRepository _bloqueRepository;
     private readonly IManicuristaRepository _manicuristaRepository;
     private readonly IDiasBloqueadosRepository _diasBloqueadosRepository;
+    private readonly ITurnoLock _turnoLock;
 
     public TurnosController(
         ITenantProvider tenantProvider,
         ITurnoRepository turnoRepository,
         IBloqueRepository bloqueRepository,
         IManicuristaRepository manicuristaRepository,
-        IDiasBloqueadosRepository diasBloqueadosRepository)
+        IDiasBloqueadosRepository diasBloqueadosRepository,
+        ITurnoLock turnoLock)
     {
         _tenantProvider = tenantProvider;
         _turnoRepository = turnoRepository;
         _bloqueRepository = bloqueRepository;
         _manicuristaRepository = manicuristaRepository;
         _diasBloqueadosRepository = diasBloqueadosRepository;
+        _turnoLock = turnoLock;
     }
 
     [AllowAnonymous]
@@ -122,6 +127,7 @@ public class TurnosController : ControllerBase
     }
 
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimits.Reservas)]
     [HttpPost("solicitar")]
     public async Task<IActionResult> Solicitar(
         SolicitarTurnoRequest request)
@@ -138,10 +144,10 @@ public class TurnosController : ControllerBase
         if (string.IsNullOrWhiteSpace(request.Servicio) || request.Servicio.Length > 200)
             return BadRequest("El servicio debe tener entre 1 y 200 caracteres.");
 
-        if (request.FechaHora <= DateTime.Now)
+        if (request.FechaHora <= HoraLocal.Ahora)
             return BadRequest("No se puede reservar un turno en el pasado.");
 
-        if (request.FechaHora <= DateTime.Now.AddHours(2))
+        if (request.FechaHora <= HoraLocal.Ahora.AddHours(2))
             return BadRequest("Debés reservar con al menos 2 horas de anticipación.");
 
         var diaBloqueadoSolicitar = await _diasBloqueadosRepository
@@ -149,6 +155,11 @@ public class TurnosController : ControllerBase
 
         if (diaBloqueadoSolicitar != null)
             return BadRequest("Ese día está bloqueado y no admite reservas.");
+
+        // Desde acá hasta guardar, ninguna otra reserva del mismo tenant puede
+        // intercalarse entre el chequeo de solapamiento y el insert.
+        await using var _ =
+            await _turnoLock.AdquirirAsync(tenantId);
 
         var manicurista =
             await _manicuristaRepository

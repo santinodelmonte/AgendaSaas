@@ -30,7 +30,8 @@ public class UsuarioRepository : IUsuarioRepository
             Email,
             PasswordHash,
             Activo,
-            Rol
+            Rol,
+            TokenVersion
         FROM Usuarios
         WHERE Email = @Email
         LIMIT 1
@@ -65,10 +66,39 @@ public class UsuarioRepository : IUsuarioRepository
                 reader.GetBoolean(4),
 
             Rol =
-                (UsuarioRol)reader.GetInt32(5)
+                (UsuarioRol)reader.GetInt32(5),
+
+            TokenVersion =
+                reader.GetInt32(6)
         };
 
     }
+
+    public async Task<int?> ObtenerTokenVersionSiActivoAsync(
+        Guid id)
+    {
+        using var connection =
+            _factory.CreateConnection();
+
+        await connection.OpenAsync();
+
+        using var command =
+            new MySqlCommand(
+                "SELECT TokenVersion FROM Usuarios WHERE Id = @Id AND Activo = 1 LIMIT 1",
+                connection);
+
+        command.Parameters.AddWithValue(
+            "@Id",
+            id.ToString());
+
+        var version =
+            await command.ExecuteScalarAsync();
+
+        return version is null or DBNull
+            ? null
+            : Convert.ToInt32(version);
+    }
+
     public async Task CrearAsync(
     Usuario usuario)
     {

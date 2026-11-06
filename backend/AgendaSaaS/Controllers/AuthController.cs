@@ -4,7 +4,9 @@ using AgendaSaaS.Repositories;
 using AgendaSaaS.Services;
 using BCrypt.Net;
 using Microsoft.AspNetCore.Authorization;
+using AgendaSaaS.Security;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AgendaSaaS.Controllers;
 
@@ -27,6 +29,7 @@ public class AuthController : ControllerBase
             jwtService;
     }
 
+    [EnableRateLimiting(RateLimits.Login)]
     [HttpPost("login")]
     public async Task<IActionResult> Login(
         LoginRequest request)

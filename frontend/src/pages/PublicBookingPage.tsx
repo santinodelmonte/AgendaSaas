@@ -395,25 +395,36 @@ export function PublicBookingPage() {
               />
             </label>
 
-            <label className="block">
+            <div className="block">
               <span className="mb-2 block text-sm font-medium text-slate-700">
                 Servicio
               </span>
 
               {serviciosDisponibles.length > 0 ? (
-                <select
-                  required
-                  value={servicio}
-                  onChange={(e) => setServicio(e.target.value)}
-                  className="h-12 w-full rounded-2xl border border-slate-300 px-4 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
-                >
-                  <option value="">Seleccioná un servicio…</option>
-                  {serviciosDisponibles.map((s) => (
-                    <option key={s.id} value={s.nombre}>
-                      {s.nombre} — ${s.precio.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
-                    </option>
-                  ))}
-                </select>
+                <div role="radiogroup" aria-label="Servicio" className="grid gap-2">
+                  {serviciosDisponibles.map((s) => {
+                    const activo = servicio === s.nombre;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={activo}
+                        onClick={() => setServicio(s.nombre)}
+                        className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
+                          activo
+                            ? 'border-brand-500 bg-brand-50 ring-4 ring-brand-100'
+                            : 'border-slate-300 bg-white hover:border-brand-500'
+                        }`}
+                      >
+                        <span className="font-medium text-slate-900">{s.nombre}</span>
+                        <span className="shrink-0 text-sm font-semibold text-slate-600">
+                          ${s.precio.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
               ) : (
                 <input
                   required
@@ -423,7 +434,7 @@ export function PublicBookingPage() {
                   className="h-12 w-full rounded-2xl border border-slate-300 px-4 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
                 />
               )}
-            </label>
+            </div>
           </div>
 
           <div className="mt-6 rounded-2xl bg-slate-50 p-4">

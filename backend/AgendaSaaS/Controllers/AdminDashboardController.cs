@@ -23,7 +23,7 @@ public class AdminDashboardController : ControllerBase
     public async Task<IActionResult> Obtener()
     {
         var tenantId = _tenantProvider.TenantId;
-        var ahora = DateTime.Now;
+        var ahora = HoraLocal.Ahora;
 
         var inicioHoy = ahora.Date;
         var finHoy = inicioHoy.AddDays(1);

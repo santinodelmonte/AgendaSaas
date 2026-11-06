@@ -13,15 +13,18 @@ public class AdminTurnosController : ControllerBase
     private readonly ITenantProvider _tenantProvider;
     private readonly ITurnoRepository _turnoRepository;
     private readonly IManicuristaRepository _manicuristaRepository;
+    private readonly ITurnoLock _turnoLock;
 
     public AdminTurnosController(
         ITenantProvider tenantProvider,
         ITurnoRepository turnoRepository,
-        IManicuristaRepository manicuristaRepository)
+        IManicuristaRepository manicuristaRepository,
+        ITurnoLock turnoLock)
     {
         _tenantProvider = tenantProvider;
         _turnoRepository = turnoRepository;
         _manicuristaRepository = manicuristaRepository;
+        _turnoLock = turnoLock;
     }
 
     [HttpGet("pendientes")]
@@ -112,7 +115,7 @@ public class AdminTurnosController : ControllerBase
         if (turno == null || turno.TenantId != tenantId)
             return NotFound();
 
-        if (turno.FechaHora < DateTime.Now)
+        if (turno.FechaHora < HoraLocal.Ahora)
             return BadRequest("No se puede cancelar un turno que ya pasó.");
 
         LiberarTurno(turno);
@@ -129,11 +132,14 @@ public class AdminTurnosController : ControllerBase
     {
         var tenantId = _tenantProvider.TenantId;
 
-        if (request.FechaHora <= DateTime.Now)
+        if (request.FechaHora <= HoraLocal.Ahora)
             return BadRequest("No se puede crear un turno en el pasado.");
 
         if (request.DuracionMinutos is < 15 or > 480)
             return BadRequest("La duración debe estar entre 15 y 480 minutos.");
+
+        await using var _ =
+            await _turnoLock.AdquirirAsync(tenantId);
 
         var duracionDefault =
             await ObtenerDuracionDefaultAsync(tenantId);
@@ -197,6 +203,9 @@ public class AdminTurnosController : ControllerBase
     {
         var tenantId = _tenantProvider.TenantId;
 
+        await using var _ =
+            await _turnoLock.AdquirirAsync(tenantId);
+
         var turno =
             await _turnoRepository
                 .ObtenerPorIdAsync(id);
@@ -209,7 +218,7 @@ public class AdminTurnosController : ControllerBase
 
         // Se permite editar solo la duración de un turno pasado; solo se bloquea
         // MOVER el turno a un horario en el pasado.
-        if (request.FechaHora != turno.FechaHora && request.FechaHora <= DateTime.Now)
+        if (request.FechaHora != turno.FechaHora && request.FechaHora <= HoraLocal.Ahora)
             return BadRequest("No se puede mover un turno al pasado.");
 
         if (request.DuracionMinutos is < 15 or > 480)
@@ -255,6 +264,9 @@ public class AdminTurnosController : ControllerBase
 
         if (request.TurnoAId == request.TurnoBId)
             return BadRequest("Elegí dos turnos distintos.");
+
+        await using var _ =
+            await _turnoLock.AdquirirAsync(tenantId);
 
         var turnoA = await _turnoRepository.ObtenerPorIdAsync(request.TurnoAId);
         var turnoB = await _turnoRepository.ObtenerPorIdAsync(request.TurnoBId);
