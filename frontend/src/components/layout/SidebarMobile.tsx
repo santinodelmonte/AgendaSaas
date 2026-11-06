@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { CalendarRange, CalendarSearch, History, LayoutDashboard, Menu, Settings2, X } from 'lucide-react';
+import { CalendarRange, CalendarSearch, History, LayoutDashboard, Settings2, X } from 'lucide-react';
 
 const items = [
   { to: '/admin',                  label: 'Dashboard',      icon: LayoutDashboard, end: true },
@@ -11,20 +10,10 @@ const items = [
   { to: '/admin/historial',        label: 'Historial',      icon: History },
 ];
 
-export function SidebarMobile() {
-  const [open, setOpen] = useState(false);
-
+// El botón que lo abre está en el Navbar; el estado vive en LayoutAdmin.
+export function SidebarMobile({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="fixed left-4 top-4 z-40 inline-flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white shadow-soft lg:hidden"
-        aria-label="Abrir menú lateral"
-      >
-        <Menu size={20} />
-      </button>
-
       {open ? (
         <div className="fixed inset-0 z-40 bg-slate-950/40 lg:hidden" onClick={() => setOpen(false)}>
           <aside

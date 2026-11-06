@@ -1,7 +1,7 @@
 import { Menu, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-export function Navbar() {
+export function Navbar({ onMenu }: { onMenu: () => void }) {
   const { email, signOut } = useAuth();
 
   return (
@@ -15,6 +15,7 @@ export function Navbar() {
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={onMenu}
             className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50 lg:hidden"
             aria-label="Abrir menú"
           >

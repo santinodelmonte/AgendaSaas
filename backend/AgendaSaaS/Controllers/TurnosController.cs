@@ -95,7 +95,11 @@ public class TurnosController : ControllerBase
                 horaActual >= bloque.PausaInicio.Value &&
                 horaActual < bloque.PausaFin.Value;
 
-            if (!estaEnPausa)
+            // No ofrecer horarios que ya no se pueden reservar (pasados o con
+            // menos de 2 h de anticipación): la clienta los tocaría y recibiría un error.
+            var reservable = actual > HoraLocal.Ahora.AddHours(2);
+
+            if (!estaEnPausa && reservable)
             {
                 // Los turnos gestionados desde el admin pueden estar corridos de la
                 // grilla o durar más que un slot: se compara por solapamiento para

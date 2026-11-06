@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MessageCircle, CalendarDays } from 'lucide-react';
 import {
   getPublicPerfil,
@@ -41,6 +41,28 @@ export function PublicBookingPage() {
 
   const [saving, setSaving] = useState(false);
 
+  // En el celular el formulario queda debajo de la grilla de horarios: al elegir
+  // uno se baja hasta el formulario para que no tenga que buscarlo.
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const elegirHorario = (value: string) => {
+    setSelectedSlot(value);
+    if (window.matchMedia('(max-width: 1023px)').matches) {
+      setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
+  };
+
+  const horarioElegidoTexto = selectedSlot
+    ? new Date(selectedSlot).toLocaleString('es-UY', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+      })
+    : '';
+
   const [nombreCliente, setNombreCliente] =
     useState('');
 
@@ -63,8 +85,6 @@ export function PublicBookingPage() {
         const perfilData =
           await getPublicPerfil(slug);
 
-        console.log('PERFIL', perfilData);
-
         if (!mounted) return;
 
         setPerfil(perfilData);
@@ -73,11 +93,6 @@ export function PublicBookingPage() {
 
         const currentTenantId =
           perfilData.tenantId;
-
-        console.log(
-          'TENANT RECIBIDO',
-          currentTenantId
-        );
 
         setTenantId(currentTenantId);
 
@@ -111,13 +126,6 @@ export function PublicBookingPage() {
       mounted = false;
     };
   }, [slug]);
-
-  useEffect(() => {
-    console.log(
-      'TENANT STATE',
-      tenantId
-    );
-  }, [tenantId]);
 
   useEffect(() => {
     if (!tenantId) return;
@@ -239,13 +247,20 @@ export function PublicBookingPage() {
         }
       );
     } catch (error) {
-      console.error(error);
+      const data = (error as { response?: { data?: unknown } }).response?.data;
+      const detalle =
+        typeof data === 'string'
+          ? data
+          : (data as { message?: string } | undefined)?.message;
 
       toast.pushToast({
         type: 'error',
-        message:
-          'No fue posible solicitar el turno.',
+        message: detalle || 'No fue posible solicitar el turno.',
       });
+
+      // Si el horario se ocupó mientras completaba los datos, refrescamos la grilla.
+      setSelectedSlot('');
+      getTurnosDisponibles(fecha, tenantId).then(setHorarios).catch(() => {});
     } finally {
       setSaving(false);
     }
@@ -272,7 +287,7 @@ export function PublicBookingPage() {
   return (
     <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
       <section className="space-y-6">
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft sm:p-6">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-brand-600">
             Agenda pública
           </p>
@@ -282,7 +297,7 @@ export function PublicBookingPage() {
           </h1>
 
           <p className="mt-3 text-sm text-slate-500">
-            Reserva tu turno de forma rápida y sencilla.
+            Reservá tu turno de forma rápida y sencilla.
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -304,15 +319,15 @@ export function PublicBookingPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft">
-          <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-soft sm:p-6">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-slate-900">
                 Horarios disponibles
               </h2>
 
               <p className="mt-1 text-sm text-slate-500">
-                Selecciona una fecha y horario.
+                Elegí una fecha y un horario.
               </p>
             </div>
 
@@ -324,7 +339,7 @@ export function PublicBookingPage() {
                 setFecha(e.target.value);
                 setSelectedSlot('');
               }}
-              className="h-11 rounded-2xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-brand-500"
+              className="h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-base outline-none focus:border-brand-500 sm:h-11 sm:w-auto sm:text-sm"
             />
           </div>
 
@@ -334,7 +349,7 @@ export function PublicBookingPage() {
             <HorarioSelector
               horarios={horarios}
               value={selectedSlot}
-              onChange={setSelectedSlot}
+              onChange={elegirHorario}
               onOcupado={() =>
                 toast.pushToast({
                   type: 'error',
@@ -345,7 +360,7 @@ export function PublicBookingPage() {
           ) : (
             <EmptyState
               title="No hay horarios disponibles"
-              description="Prueba con otra fecha."
+              description="Probá con otra fecha."
             />
           )}
         </div>
@@ -353,15 +368,16 @@ export function PublicBookingPage() {
 
             <aside className="space-y-6">
         <form
+          ref={formRef}
           onSubmit={onSubmit}
-          className="rounded-3xl border border-slate-200 bg-white p-6 shadow-soft"
+          className="scroll-mt-20 rounded-3xl border border-slate-200 bg-white p-5 shadow-soft sm:p-6"
         >
           <h2 className="text-xl font-semibold text-slate-900">
             Solicitar turno
           </h2>
 
           <p className="mt-1 text-sm text-slate-500">
-            Completa tus datos para confirmar la reserva.
+            Completá tus datos y la manicurista te confirma por WhatsApp.
           </p>
 
           <div className="mt-6 space-y-4">
@@ -372,11 +388,12 @@ export function PublicBookingPage() {
 
               <input
                 required
+                autoComplete="name"
                 value={nombreCliente}
                 onChange={(e) =>
                   setNombreCliente(e.target.value)
                 }
-                className="h-12 w-full rounded-2xl border border-slate-300 px-4 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+                className="h-12 w-full rounded-2xl border border-slate-300 px-4 text-base outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
               />
             </label>
 
@@ -387,11 +404,15 @@ export function PublicBookingPage() {
 
               <input
                 required
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                placeholder="Ej: 099 123 456"
                 value={telefonoCliente}
                 onChange={(e) =>
                   setTelefonoCliente(e.target.value)
                 }
-                className="h-12 w-full rounded-2xl border border-slate-300 px-4 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+                className="h-12 w-full rounded-2xl border border-slate-300 px-4 text-base outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
               />
             </label>
 
@@ -419,7 +440,7 @@ export function PublicBookingPage() {
                       >
                         <span className="font-medium text-slate-900">{s.nombre}</span>
                         <span className="shrink-0 text-sm font-semibold text-slate-600">
-                          ${s.precio.toLocaleString('es-AR', { minimumFractionDigits: 0 })}
+                          ${s.precio.toLocaleString('es-UY', { minimumFractionDigits: 0 })}
                         </span>
                       </button>
                     );
@@ -431,7 +452,7 @@ export function PublicBookingPage() {
                   value={servicio}
                   onChange={(e) => setServicio(e.target.value)}
                   placeholder="Ej: Kapping gel"
-                  className="h-12 w-full rounded-2xl border border-slate-300 px-4 outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
+                  className="h-12 w-full rounded-2xl border border-slate-300 px-4 text-base outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-100"
                 />
               )}
             </div>
@@ -443,8 +464,7 @@ export function PublicBookingPage() {
             </p>
 
             <p className="mt-1 text-base font-semibold text-slate-900">
-              {selectedSlot ||
-                'Selecciona un horario'}
+              {horarioElegidoTexto || 'Elegí un horario arriba'}
             </p>
           </div>
 
@@ -457,6 +477,13 @@ export function PublicBookingPage() {
               ? 'Enviando...'
               : 'Solicitar turno'}
           </button>
+
+          <p className="mt-3 text-center text-xs leading-relaxed text-slate-500">
+            Al solicitar el turno aceptás los{' '}
+            <Link to="/terminos" className="underline">términos</Link> y que tus datos se usen para
+            gestionar tu reserva y contactarte por WhatsApp, según la{' '}
+            <Link to="/privacidad" className="underline">política de privacidad</Link>.
+          </p>
         </form>
       </aside>
     </div>

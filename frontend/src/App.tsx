@@ -8,6 +8,7 @@ import { ToastHost } from './components/common/ToastHost';
 import { LoginPage } from './pages/LoginPage';
 import { PublicBookingPage } from './pages/PublicBookingPage';
 import { BookingSuccessPage } from './pages/BookingSuccessPage';
+import { PrivacidadPage, TerminosPage } from './pages/LegalPages';
 import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
 import { AdminPerfilPage } from './pages/admin/AdminPerfilPage';
 import { AdminHorariosPage } from './pages/admin/AdminHorariosPage';
@@ -25,6 +26,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<PublicOnlyRoute><LoginPage /></PublicOnlyRoute>} />
         <Route path="/agenda/:slug" element={<LayoutPublico><PublicBookingPage /></LayoutPublico>} />
+        <Route path="/terminos" element={<LayoutPublico><TerminosPage /></LayoutPublico>} />
+        <Route path="/privacidad" element={<LayoutPublico><PrivacidadPage /></LayoutPublico>} />
         <Route path="/agenda/:slug/exito" element={<LayoutPublico><BookingSuccessPage /></LayoutPublico>} />
 
         <Route

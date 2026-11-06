@@ -67,7 +67,7 @@ export function AdminScheduleTimeline({
   const mostrarAhora = esHoy && ahora >= ventana.inicio && ahora <= ventana.fin;
 
   return (
-    <div className="relative" style={{ height: alto(ventana) + 24 }}>
+    <div className="relative isolate" style={{ height: alto(ventana) + 24 }}>
       {/* Eje de horas + líneas guía */}
       {marcas.map((m) => (
         <div key={m} className="pointer-events-none absolute left-0 right-0" style={{ top: top(m) }}>

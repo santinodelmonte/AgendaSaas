@@ -9,8 +9,8 @@ export function LoginPage() {
   const { signIn, isAuthenticated, isInitializing, rol } = useAuth();
   const toast = useToast();
 
-  const [email, setEmail] = useState('admin@maria.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   if (isInitializing) return <Loading fullScreen />;
