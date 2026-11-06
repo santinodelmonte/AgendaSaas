@@ -21,7 +21,9 @@ public class TenantMiddleware
         // Endpoints no scopeados a un tenant.
         // /api/superadmin opera sobre todas las manicuristas y se protege por rol.
         // /api/public resuelve el tenant por slug. /health es del hosting.
-        if (path.StartsWithSegments("/health") ||
+        // Todo lo que no es /api es el frontend (index.html y assets).
+        if (!path.StartsWithSegments("/api") ||
+            path.StartsWithSegments("/health") ||
             path.StartsWithSegments("/api/auth") ||
             path.StartsWithSegments("/api/public") ||
             path.StartsWithSegments("/api/superadmin"))

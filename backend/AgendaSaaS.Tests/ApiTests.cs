@@ -18,6 +18,19 @@ public class ApiTests : IClassFixture<AgendaFactory>
         Assert.Equal(HttpStatusCode.OK, resp.StatusCode);
     }
 
+    [Theory]
+    [InlineData("/")]
+    [InlineData("/agenda/maria")]
+    [InlineData("/privacidad")]
+    public async Task Rutas_del_frontend_no_pasan_por_el_filtro_de_tenant(string ruta)
+    {
+        // En prod estas rutas devuelven index.html; nunca el 400 de "falta tenant".
+        var resp = await _factory.CreateClient().GetAsync(ruta);
+        var body = await resp.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("Falta el identificador", body);
+        Assert.NotEqual(HttpStatusCode.BadRequest, resp.StatusCode);
+    }
+
     [Fact]
     public async Task Login_con_password_incorrecta_da_401()
     {

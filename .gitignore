@@ -405,3 +405,8 @@ FodyWeavers.xsd
 .env.local
 appsettings.Development.json
 appsettings.Local.json
+
+# AgendaSaaS: front compilado copiado al backend y config de producción (secretos)
+backend/AgendaSaaS/wwwroot/
+backend/AgendaSaaS/appsettings.Production.json
+deploy/

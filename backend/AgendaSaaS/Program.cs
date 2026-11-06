@@ -234,6 +234,11 @@ app.UseCors("AgendaSaaS");
 
 app.UseHttpsRedirection();
 
+// En producción el frontend compilado (frontend/dist) se publica en wwwroot y
+// lo sirve la misma app: un solo sitio en el hosting, sin CORS entre dominios.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseRateLimiter();
 
 app.UseAuthentication();
@@ -260,6 +265,10 @@ app.MapGet("/health", async (SqlConnectionFactory factory) =>
             statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 }).AllowAnonymous();
+
+// Rutas del SPA (/agenda/maria, /admin, ...): cualquier ruta que no sea API
+// devuelve index.html y la resuelve React Router.
+app.MapFallbackToFile("index.html").AllowAnonymous();
 
 app.Run();
 
