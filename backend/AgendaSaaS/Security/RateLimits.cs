@@ -13,8 +13,14 @@ public static class RateLimits
     public const string Reservas = "reservas";
 
     public static IServiceCollection AddAgendaRateLimits(
-        this IServiceCollection services)
+        this IServiceCollection services,
+        IConfiguration configuration)
     {
+        // Configurable (RateLimits:LoginPorMinuto / RateLimits:ReservasPor15Min)
+        // para que los tests de integración no choquen con el límite.
+        var login = configuration.GetValue("RateLimits:LoginPorMinuto", 5);
+        var reservas = configuration.GetValue("RateLimits:ReservasPor15Min", 5);
+
         return services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode =
@@ -32,10 +38,10 @@ public static class RateLimits
             };
 
             options.AddPolicy(Login, context =>
-                PorIp(context, permitidos: 5, ventana: TimeSpan.FromMinutes(1)));
+                PorIp(context, permitidos: login, ventana: TimeSpan.FromMinutes(1)));
 
             options.AddPolicy(Reservas, context =>
-                PorIp(context, permitidos: 5, ventana: TimeSpan.FromMinutes(15)));
+                PorIp(context, permitidos: reservas, ventana: TimeSpan.FromMinutes(15)));
         });
     }
 

@@ -83,7 +83,7 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddAgendaRateLimits();
+builder.Services.AddAgendaRateLimits(builder.Configuration);
 
 // Detrás de un proxy reverso (Nginx, Caddy) la IP real llega en X-Forwarded-For;
 // sin esto el rate limiting por IP vería a todos los clientes como el proxy.
@@ -262,3 +262,5 @@ app.MapGet("/health", async (SqlConnectionFactory factory) =>
 }).AllowAnonymous();
 
 app.Run();
+
+public partial class Program;
